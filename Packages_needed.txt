@@ -1,0 +1,17 @@
+MDAnalysis
+pennylane
+matplotlib
+seaborn
+mdakit_sasa
+"pennylane-lightning-gpu"
+cupy-cuda12x
+biopython
+reportlab
+pyyaml
+
+failed for freeSASA: 
+needed to install freeSASA: gcc needed 
+
+
+
+

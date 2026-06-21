@@ -1,0 +1,29 @@
+# Configuration for 1L2Y (Trp-Cage Miniprotein) Analysis
+# =========================================================
+# This config demonstrates end-to-end analysis using PDB code auto-download
+
+# Protein Identification
+pdb_path: /home/pratik/prod_final/1L2Y.pdb
+# pdb_code: 1L2Y
+molecule_name: Trp Cage
+
+# Download Settings (used when pdb_code is specified)
+# download_dir: ./inputs
+# force_download: false      # Set true to re-download even if file exists
+# verify_checksum: true      # Verify file integrity after download
+
+# Analysis Parameters
+chain: A                   # Protein chain to analyze
+protein_only: true         # Exclude non-protein residues (water, ions, etc.)
+
+# Quantum Simulation Settings
+shots: 1000000              # Number of quantum measurements (more = better statistics)
+pl_device: lightning.gpu    # PennyLane device: 'default.qubit' (CPU), 'lightning.gpu' (GPU)
+
+# Visualization
+bins: 100000                 # Number of bins for energy histograms
+
+# Make the open phi_cap as pi/2 and discount to 0.95
+# Output Settings
+output_dir: /home/pratik/prod_final/outputs/1l2y_A_bulk_octanol_v3_95_no_diffusion
+report_file_name: 1l2y_100ps_report_A_v3.pdf
