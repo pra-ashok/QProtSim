@@ -1,9 +1,0 @@
-LICENSE
-README.md
-setup.py
-src/protqc.egg-info/PKG-INFO
-src/protqc.egg-info/SOURCES.txt
-src/protqc.egg-info/dependency_links.txt
-src/protqc.egg-info/entry_points.txt
-src/protqc.egg-info/requires.txt
-src/protqc.egg-info/top_level.txt

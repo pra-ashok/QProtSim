@@ -1,2 +1,0 @@
-[console_scripts]
-protqc = protqc.__main__:main
