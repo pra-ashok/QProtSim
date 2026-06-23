@@ -12,6 +12,131 @@ from matplotlib.lines import Line2D
 
 HEATMAP_CMAP = sns.color_palette("light:darkblue", as_cmap=True)
 
+
+def _overlap_area(box_a: tuple[float, float, float, float], box_b: tuple[float, float, float, float]) -> float:
+    x0 = max(box_a[0], box_b[0])
+    y0 = max(box_a[1], box_b[1])
+    x1 = min(box_a[2], box_b[2])
+    y1 = min(box_a[3], box_b[3])
+    if x1 <= x0 or y1 <= y0:
+        return 0.0
+    return (x1 - x0) * (y1 - y0)
+
+
+def _scatter_label_candidates(base_offset: float = 7.0, rings: int = 4) -> list[tuple[float, float]]:
+    candidates: list[tuple[float, float]] = []
+    angles = np.deg2rad([45, 135, 315, 225, 0, 90, 180, 270])
+    for ring in range(rings):
+        radius = base_offset + ring * 6.0
+        for angle in angles:
+            candidates.append((float(radius * np.cos(angle)), float(radius * np.sin(angle))))
+    return candidates
+
+
+def _annotation_box(
+    anchor_px: np.ndarray,
+    offset_pts: tuple[float, float],
+    label: str,
+    fontsize: float,
+    dpi: float,
+) -> tuple[float, float, float, float]:
+    scale = dpi / 72.0
+    dx_px = offset_pts[0] * scale
+    dy_px = offset_pts[1] * scale
+    width = max(12.0, len(str(label)) * fontsize * 0.62 * scale)
+    height = fontsize * 1.35 * scale
+    pad = 2.0 * scale
+
+    x_anchor = float(anchor_px[0] + dx_px)
+    y_anchor = float(anchor_px[1] + dy_px)
+
+    if offset_pts[0] < 0:
+        x0, x1 = x_anchor - width - pad, x_anchor + pad
+    else:
+        x0, x1 = x_anchor - pad, x_anchor + width + pad
+
+    if offset_pts[1] < 0:
+        y0, y1 = y_anchor - height - pad, y_anchor + pad
+    else:
+        y0, y1 = y_anchor - pad, y_anchor + height + pad
+
+    return x0, y0, x1, y1
+
+
+def _annotate_scatter_labels(
+    ax: plt.Axes,
+    x_data: Sequence[float],
+    y_data: Sequence[float],
+    labels: Sequence[str],
+    *,
+    fontsize: float = 8,
+    point_size: float = 70,
+    color: str = "black",
+    zorder: int = 4,
+) -> None:
+    """Place scatter labels with deterministic jittered offsets to reduce overlap."""
+    fig = ax.figure
+    fig.canvas.draw()
+
+    xy = np.column_stack([np.asarray(x_data, dtype=float), np.asarray(y_data, dtype=float)])
+    finite_mask = np.isfinite(xy).all(axis=1)
+    anchors_px = ax.transData.transform(xy[finite_mask])
+    finite_labels = [label for label, keep in zip(labels, finite_mask) if keep]
+    if len(finite_labels) == 0:
+        return
+
+    dpi = float(fig.dpi)
+    point_radius_px = max(4.0, float(np.sqrt(max(point_size, 1.0) / np.pi)) * dpi / 72.0)
+    point_boxes = [
+        (
+            float(px - point_radius_px),
+            float(py - point_radius_px),
+            float(px + point_radius_px),
+            float(py + point_radius_px),
+        )
+        for px, py in anchors_px
+    ]
+    axes_box = ax.get_window_extent()
+    axes_bounds = (axes_box.x0, axes_box.y0, axes_box.x1, axes_box.y1)
+    candidates = _scatter_label_candidates()
+    placed_boxes: list[tuple[float, float, float, float]] = []
+
+    for anchor_px, label, xy_point in zip(anchors_px, finite_labels, xy[finite_mask]):
+        best_offset = candidates[0]
+        best_box = _annotation_box(anchor_px, best_offset, label, fontsize, dpi)
+        best_score = float("inf")
+
+        for offset in candidates:
+            box = _annotation_box(anchor_px, offset, label, fontsize, dpi)
+            label_overlap = sum(_overlap_area(box, other) for other in placed_boxes)
+            point_overlap = sum(_overlap_area(box, point_box) for point_box in point_boxes)
+            outside = (
+                max(0.0, axes_bounds[0] - box[0])
+                + max(0.0, axes_bounds[1] - box[1])
+                + max(0.0, box[2] - axes_bounds[2])
+                + max(0.0, box[3] - axes_bounds[3])
+            )
+            distance_penalty = 0.04 * (offset[0] * offset[0] + offset[1] * offset[1])
+            score = 8.0 * label_overlap + 4.0 * point_overlap + 30.0 * outside + distance_penalty
+            if score < best_score:
+                best_score = score
+                best_offset = offset
+                best_box = box
+
+        placed_boxes.append(best_box)
+        ax.annotate(
+            str(label),
+            (float(xy_point[0]), float(xy_point[1])),
+            textcoords="offset points",
+            xytext=best_offset,
+            ha="right" if best_offset[0] < 0 else "left",
+            va="top" if best_offset[1] < 0 else "bottom",
+            fontsize=fontsize,
+            color=color,
+            zorder=zorder,
+            clip_on=False,
+        )
+
 def plot_directional_excitation_information_clustermap(
     csv_path: str,
     save_png: Optional[str] = None,
@@ -417,17 +542,6 @@ def plot_kl_divergence_scatter(
         zorder=3,
     )
 
-    for x_val, y_val, label in zip(x_data, y_data, labels):
-        ax.annotate(
-            label,
-            (x_val, y_val),
-            textcoords="offset points",
-            xytext=(5, 4),
-            fontsize=8,
-            color="black",
-            zorder=4,
-        )
-
     max_value = float(max(np.max(x_data), np.max(y_data), 1e-12))
     ax.plot(
         [0, max_value * 1.05],
@@ -437,8 +551,9 @@ def plot_kl_divergence_scatter(
         linewidth=1.0,
         zorder=1,
     )
-    ax.set_xlim(0, max_value * 1.08)
-    ax.set_ylim(0, max_value * 1.08)
+    ax.set_xlim(0, max_value * 1.14)
+    ax.set_ylim(0, max_value * 1.14)
+    _annotate_scatter_labels(ax, x_data, y_data, labels, fontsize=8, point_size=70)
     ax.set_xlabel(r"Normalised $KL_{ground}$")
     ax.set_ylabel(r"Normalised $KL_{exc}$")
     ax.set_title(f"{molecule_name}: KL ground vs. excited")
@@ -1096,16 +1211,22 @@ def plot_stability_vs_sensitivity_quadrants(
     )
 
     if annotate_residues:
-        for xi, yi, label in zip(x_data, y_data, residues):
-            ax.annotate(
-                label,
-                (xi, yi),
-                textcoords="offset points",
-                xytext=(5, 4),
-                fontsize=8,
-                color="black",
-                zorder=4,
-            )
+        x_min = float(min(np.min(x_data), x_threshold))
+        x_max = float(max(np.max(x_data), x_threshold))
+        y_min = float(min(np.min(y_data), y_threshold))
+        y_max = float(max(np.max(y_data), y_threshold))
+        x_pad = max((x_max - x_min) * 0.10, 1e-3)
+        y_pad = max((y_max - y_min) * 0.10, 1e-3)
+        ax.set_xlim(x_min - x_pad, x_max + x_pad)
+        ax.set_ylim(y_min - y_pad, y_max + y_pad)
+        _annotate_scatter_labels(
+            ax,
+            x_data,
+            y_data,
+            residues,
+            fontsize=8,
+            point_size=70,
+        )
 
     # Quadrant divider lines
     ax.axvline(x_threshold, color=quadrant_line_color, linestyle="--", linewidth=1.2, zorder=1)

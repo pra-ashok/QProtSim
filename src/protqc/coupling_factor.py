@@ -8,10 +8,11 @@ from MDAnalysis.lib.distances import distance_array
 
 DEFAULT_KAPPA_WEIGHTS: Dict[str, float] = {
     "BB": 1.00,
-    "HB": 0.80,
-    "salt": 0.70,
-    "vdW": 0.50,
-    "wat": 0.40,
+    "disulfide": 1.00,
+    "HB": 0.50,
+    "salt": 0.40,
+    "vdW": 0.05,
+    # "wat": 0.40,
 }
 
 
@@ -23,6 +24,7 @@ AA_MASS_DA: Dict[str, float] = {
     "VAL": 117.15,
     "THR": 119.12,
     "CYS": 121.16,
+    "CYX": 121.16,
     "LEU": 131.17,
     "ILE": 131.17,
     "ASN": 132.12,
@@ -34,7 +36,10 @@ AA_MASS_DA: Dict[str, float] = {
     "HIS": 155.16,
     "HID": 155.16,
     "HIE": 155.16,
+    "HSD": 155.16,
+    "HSE": 155.16,
     "HIP": 156.17,
+    "HSP": 156.17,
     "PHE": 165.19,
     "ARG": 174.20,
     "TYR": 181.19,
@@ -255,6 +260,40 @@ def _kappa_backbone(
     return 1.0
 
 
+def _kappa_disulfide(
+    res_i: Any,
+    res_j: Any,
+    box: np.ndarray | None = None,
+    disulfide_cutoff: float = 2.3,
+) -> float:
+    """
+    Disulfide covalent crosslink term.
+
+    Returns 1 when both residues are cysteine-like residues and their SG atoms
+    are within disulfide_cutoff, otherwise 0. The default cutoff covers the
+    typical protein disulfide S-S bond length (~2.03 A) with modest coordinate
+    tolerance.
+    """
+    resname_i = str(res_i.resname).strip().upper()
+    resname_j = str(res_j.resname).strip().upper()
+
+    if resname_i not in {"CYS", "CYX"} or resname_j not in {"CYS", "CYX"}:
+        return 0.0
+
+    sg_i = _named_atom_positions(res_i, {"SG"})
+    sg_j = _named_atom_positions(res_j, {"SG"})
+
+    if sg_i.size == 0 or sg_j.size == 0:
+        return 0.0
+
+    d = distance_array(sg_i, sg_j, box=box)
+
+    if float(np.min(d)) <= disulfide_cutoff:
+        return 1.0
+
+    return 0.0
+
+
 def _kappa_hbond(
     res_i: Any,
     res_j: Any,
@@ -340,10 +379,17 @@ def _kappa_salt_bridge(
     salt_norm: float = 1.0,
 ) -> float:
     """
-    Salt-bridge / charged-contact coupling term.
+    Salt-bridge ionic charged-contact coupling term.
 
-    A salt bridge is counted between positive and negative side-chain
-    charged atoms if r_ab <= salt_cutoff.
+    This term captures the electrostatic side-chain contact component of a
+    salt bridge. The hydrogen-bond component is represented separately by
+    kappa_HB in S_ij, so a geometrically compatible salt bridge can contribute
+    through both w_salt * kappa_salt and w_HB * kappa_HB.
+
+    A charged contact is counted between positive and negative side-chain
+    atoms if r_ab <= salt_cutoff. Positive groups are Lys NZ, Arg guanidinium
+    nitrogens, and explicitly protonated histidine names HIP/HSP. Negative
+    groups are Asp/Glu carboxylate oxygens.
 
     Raw score:
 
@@ -541,6 +587,7 @@ def build_Kij_pairs(
 
         S_ij =
             w_BB    * kappa_BB
+          + w_disulfide * kappa_disulfide
           + w_HB    * kappa_HB
           + w_salt  * kappa_salt
           + w_vdW   * kappa_vdW
@@ -590,9 +637,9 @@ def build_Kij_pairs(
         Whether to use periodic boundary conditions.
 
     weights : mapping or None
-        Weights for the five coupling components.
+        Weights for the coupling components.
         Expected keys are:
-            "BB", "HB", "salt", "vdW", "wat"
+            "BB", "disulfide", "HB", "salt", "vdW", "wat"
 
     omega : sequence, mapping, or None
         Optional residue frequencies.
@@ -633,7 +680,11 @@ def build_Kij_pairs(
     weights_used = dict(DEFAULT_KAPPA_WEIGHTS)
 
     if weights is not None:
-        weights_used.update({str(k): float(v) for k, v in weights.items()})
+        for key, value in weights.items():
+            key_norm = str(key)
+            if key_norm == "SS":
+                key_norm = "disulfide"
+            weights_used[key_norm] = float(value)
 
     residues = _selected_residues(
         u,
@@ -685,6 +736,12 @@ def build_Kij_pairs(
                 box=box,
             )
 
+            kappa_disulfide = _kappa_disulfide(
+                residues[i],
+                residues[j],
+                box=box,
+            )
+
             kappa_HB = _kappa_hbond(
                 residues[i],
                 residues[j],
@@ -710,6 +767,7 @@ def build_Kij_pairs(
 
             Sij = (
                 weights_used.get("BB", 0.0) * kappa_BB
+                + weights_used.get("disulfide", 0.0) * kappa_disulfide
                 + weights_used.get("HB", 0.0) * kappa_HB
                 + weights_used.get("salt", 0.0) * kappa_salt
                 + weights_used.get("vdW", 0.0) * kappa_vdW
@@ -728,6 +786,7 @@ def build_Kij_pairs(
 
             terms[pair] = {
                 "kappa_BB": float(kappa_BB),
+                "kappa_disulfide": float(kappa_disulfide),
                 "kappa_HB": float(kappa_HB),
                 "kappa_salt": float(kappa_salt),
                 "kappa_vdW": float(kappa_vdW),
