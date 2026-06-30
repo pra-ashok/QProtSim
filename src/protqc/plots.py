@@ -443,7 +443,7 @@ def plot_dual_axis_comparison(
 
     # X-axis configuration
     ax1.set_xticks(x)
-    ax1.set_xticklabels(residues, rotation=45, ha="right", fontsize=10)
+    ax1.set_xticklabels(residues, rotation=90, ha="right", fontsize=10)
     # Combined legend
     legend_handles = [
         Patch(facecolor=color1, label=metric1_label),
@@ -508,7 +508,7 @@ def plot_residue_information_gain(
     )
     ax.set_xlabel("Residue")
     ax.set_ylabel("Normalised KL contribution")
-    ax.tick_params(axis="x", rotation=45, labelsize=9)
+    ax.tick_params(axis="x", rotation=90, labelsize=9)
     ax.legend(title=None, fontsize=9)
     fig.tight_layout()
     if save_path:
@@ -630,7 +630,7 @@ def plot_kl_divergence_line_comparison(
     ax.set_ylabel("Normalised KL contribution", fontsize=12, fontweight="bold")
     ax.set_title(f"{molecule_name}: Residue KL divergence", fontsize=13, fontweight="bold")
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=10)
+    ax.set_xticklabels(labels, rotation=90, ha="right", fontsize=10)
     ax.legend(title=None, frameon=True, fontsize=10)
     ax.grid(False)
     sns.despine(ax=ax)
@@ -673,7 +673,7 @@ def plot_stability_vs_information(
     )
     ax.set_xlabel("Amino acid")
     ax.set_ylabel("Ground-state probability / normalised KL contribution")
-    ax.tick_params(axis="x", rotation=45, labelsize=9)
+    ax.tick_params(axis="x", rotation=90, labelsize=9)
     ax.legend(title=None, fontsize=9)
     fig.tight_layout()
     if save_path:
@@ -772,7 +772,7 @@ def plot_pairwise_matrix_heatmap(
         cbar.set_label(colorbar_label, fontsize=font_size + 1, labelpad=10)
         cbar.ax.tick_params(labelsize=font_size)
 
-    ax.tick_params(axis="x", top=False, bottom=True, rotation=45, labelsize=font_size)
+    ax.tick_params(axis="x", top=False, bottom=True, rotation=90, labelsize=font_size)
     ax.tick_params(axis="y", rotation=0, labelsize=font_size)
     ax.set_xticklabels(ax.get_xticklabels(), ha="right", rotation_mode="anchor")
     for spine in ax.spines.values():
@@ -931,7 +931,7 @@ def plot_ground_state_comparison(
     ax.set_xlabel("Amino acid")
     ax.set_ylabel("P_ground")
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=9)
+    ax.set_xticklabels(labels, rotation=90, ha="right", fontsize=9)
     ax.legend(title=None, fontsize=9, frameon=True)
     ax.grid(False)
     sns.despine(ax=ax)
@@ -1083,7 +1083,7 @@ def plot_dual_axis_line_comparison(
 
     # X-axis configuration
     ax1.set_xticks(x)
-    ax1.set_xticklabels(residues, rotation=45, ha="right", fontsize=10)
+    ax1.set_xticklabels(residues, rotation=90, ha="right", fontsize=10)
 
     # Combined legend
     legend_handles = [

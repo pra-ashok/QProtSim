@@ -66,7 +66,7 @@ def plot_contact_heatmap(
     ax.set_ylabel("Residue", fontsize=font_size, labelpad=12, fontweight="bold")
     ax.set_title(title, fontsize=font_size, fontweight="bold", pad=18)
 
-    ax.tick_params(axis="x", labelsize=font_size, rotation=45)
+    ax.tick_params(axis="x", labelsize=font_size, rotation=90)
     ax.tick_params(axis="y", labelsize=font_size, rotation=0)
 
     plt.tight_layout()

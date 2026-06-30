@@ -583,7 +583,6 @@ def compute_directed_transfer_schedule(
 
     for i in range(n_qubits):
         total = 0.0
-
         for k, Kik in neighbours[i]:
             # drive_ik = max(0.0, float((mu_values[i] - mu_values[k])/(mu)))
             total += Kik
@@ -606,13 +605,18 @@ def compute_directed_transfer_schedule(
             if drive_ij <= 0.0:
                 continue
 
-            numerator = float(Kij) * drive_ij
+            numerator = 2*float(Kij) * drive_ij
 
+            # deltaP = (
+            #     float(p_clip[i])
+            #     * (1.0 - float(p_clip[j]))
+            #     * numerator
+            #     / (float(denom[i]) + eps)
+            # )
             deltaP = (
-                float(p_clip[i])
-                * (1.0 - float(p_clip[j]))
-                * numerator
-                / (float(denom[i]) + eps)
+                # (1.0 - float(p_clip[j]))
+               numerator
+                / (denom[i] + denom[j] + eps)
             )
 
             deltaP = float(np.clip(deltaP, 0.0, 1.0))

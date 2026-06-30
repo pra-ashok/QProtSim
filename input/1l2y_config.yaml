@@ -3,8 +3,8 @@
 # This config demonstrates end-to-end analysis using PDB code auto-download
 
 # Protein Identification
-# pdb_path: /home/pratik/prod_final/1L2Y.pdb
-pdb_code: 9GDL
+pdb_path: /home/pratik/prod_final/1L2Y.pdb
+# pdb_code: 9GDL
 molecule_name: Trp Cage
 
 # Download Settings (used when pdb_code is specified)
@@ -25,5 +25,5 @@ bins: 100000                 # Number of bins for energy histograms
 
 # Make the open phi_cap as pi/2 and discount to 0.95
 # Output Settings
-output_dir: /home/pratik/prod_final/outputs/9GDL_A_bulkY_V4
-report_file_name: 9GDL_100ps_report_A_v4.pdf
+output_dir: /home/pratik/prod_final/outputs/1L2Y_A_bulkY_V4
+report_file_name: 1L2Y_100ps_report_A_v4.pdf

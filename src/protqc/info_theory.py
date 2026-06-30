@@ -1328,7 +1328,7 @@ def _save_voxel_affinity_heatmap(
     ax.set_title("Voxel-vs-voxel affinity matrix", fontsize=13, fontweight="bold", pad=14)
     ax.set_xlabel("Voxel")
     ax.set_ylabel("Voxel")
-    ax.tick_params(axis="x", rotation=45, labelsize=8)
+    ax.tick_params(axis="x", rotation=90, labelsize=8)
     ax.tick_params(axis="y", rotation=0, labelsize=8)
     fig.tight_layout()
 
@@ -1371,7 +1371,7 @@ def _save_region_affinity_heatmap(
     ax.set_title(title, fontsize=13, fontweight="bold", pad=14)
     ax.set_xlabel("Motif region")
     ax.set_ylabel("Motif region")
-    ax.tick_params(axis="x", rotation=45, labelsize=8)
+    ax.tick_params(axis="x", rotation=90, labelsize=8)
     ax.tick_params(axis="y", rotation=0, labelsize=8)
     fig.tight_layout()
 
