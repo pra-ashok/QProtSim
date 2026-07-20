@@ -230,8 +230,6 @@ def _contact_weight_35(
     if d.size == 0:
         return 0.0
 
-    # Sum of inverse distances:
-    # sum(1 / d) = N / harmonic_mean(d)
     return float(np.sum(1.0 / np.maximum(d, eps)))
 
 def _residues_are_covalently_bonded(res_i, res_j) -> bool:
@@ -345,10 +343,7 @@ def boltzmann_expectation(delta_E, T=298.0, k_B=8.314462618e-3):
     Compute expected energy, probabilities, and the probability
     at the expected energy level for a two-level Boltzmann system.
     """
-    # # Example
-    # res = boltzmann_expectation(12.3, 298.0)
-    # for k, v in res.items():
-    #     print(f"{k:12s}: {v:.6f}")
+    # Here the value is set to k_B = R; the gas constant
     beta = 1.0 / (k_B * T)
     Z = 1.0 + np.exp(-beta * delta_E)
 

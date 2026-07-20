@@ -12,6 +12,13 @@ from matplotlib.lines import Line2D
 
 HEATMAP_CMAP = sns.color_palette("light:darkblue", as_cmap=True)
 
+# Keep text consistently readable across all plot types.
+PLOT_FONT_SIZE = 14
+PLOT_TICK_SIZE = 13
+PLOT_LABEL_SIZE = 18
+PLOT_TITLE_SIZE = 22
+PLOT_LEGEND_SIZE = 18
+
 
 def _overlap_area(box_a: tuple[float, float, float, float], box_b: tuple[float, float, float, float]) -> float:
     x0 = max(box_a[0], box_b[0])
@@ -132,6 +139,7 @@ def _annotate_scatter_labels(
             ha="right" if best_offset[0] < 0 else "left",
             va="top" if best_offset[1] < 0 else "bottom",
             fontsize=fontsize,
+            fontweight="bold",
             color=color,
             zorder=zorder,
             clip_on=False,
@@ -191,7 +199,12 @@ def plot_directional_excitation_information_clustermap(
         yticklabels=True,
     )
 
-    g.fig.suptitle("DEI-based Clustermap (Manhattan / Cityblock distance)", y=1.02)
+    g.fig.suptitle(
+        "DEI-based Clustermap (Manhattan / Cityblock distance)",
+        y=1.02,
+        fontsize=PLOT_TITLE_SIZE,
+        fontweight="bold",
+    )
 
     # Save to PNG if requested
     if save_png:
@@ -218,11 +231,20 @@ def set_academic_style() -> None:
         context="paper",
         style="whitegrid",
         font="DejaVu Serif",
-        font_scale=1.15,
+        font_scale=1.35,
         rc={
-            "axes.linewidth": 0.8,
-            "axes.titleweight": "bold",
+            "font.size": PLOT_FONT_SIZE,
+            "font.weight": "bold",
+            "axes.labelsize": PLOT_LABEL_SIZE,
             "axes.labelweight": "bold",
+            "axes.titlesize": PLOT_TITLE_SIZE,
+            "axes.titleweight": "bold",
+            "xtick.labelsize": PLOT_TICK_SIZE,
+            "ytick.labelsize": PLOT_TICK_SIZE,
+            "legend.fontsize": PLOT_LEGEND_SIZE,
+            "figure.titlesize": PLOT_TITLE_SIZE,
+            "figure.titleweight": "bold",
+            "axes.linewidth": 0.8,
             "grid.linewidth": 0.6,
             "grid.alpha": 0.35,
             "xtick.direction": "out",
@@ -419,9 +441,9 @@ def plot_dual_axis_comparison(
         alpha=0.85,
     )
 
-    ax1.set_xlabel(r"Amino Acid", fontsize=13, fontweight='bold')
-    ax1.set_ylabel(metric1_label, fontsize=12, color=color1, fontweight='bold')
-    ax1.tick_params(axis='y', labelcolor=color1, labelsize=11)
+    ax1.set_xlabel(r"Amino Acid", fontsize=PLOT_LABEL_SIZE, fontweight="bold")
+    ax1.set_ylabel(metric1_label, fontsize=PLOT_LABEL_SIZE, color=color1, fontweight="bold")
+    ax1.tick_params(axis="y", labelcolor=color1, labelsize=PLOT_TICK_SIZE)
     ax1.set_ylim(0, max(metric1_data) * 1.15)
 
     # Create secondary y-axis
@@ -437,13 +459,13 @@ def plot_dual_axis_comparison(
     )
  
     ax2.set_ylabel(f"{metric2_label} (normalised)",
-                   fontsize=12, color=color2, fontweight='bold')
-    ax2.tick_params(axis='y', labelcolor=color2, labelsize=11)
+                   fontsize=PLOT_LABEL_SIZE, color=color2, fontweight="bold")
+    ax2.tick_params(axis="y", labelcolor=color2, labelsize=PLOT_TICK_SIZE)
     ax2.set_ylim(0, max(metric2_data) * 1.15)
 
     # X-axis configuration
     ax1.set_xticks(x)
-    ax1.set_xticklabels(residues, rotation=90, ha="right", fontsize=10)
+    ax1.set_xticklabels(residues, rotation=90, ha="right", fontsize=PLOT_TICK_SIZE, fontweight="bold")
     # Combined legend
     legend_handles = [
         Patch(facecolor=color1, label=metric1_label),
@@ -453,7 +475,7 @@ def plot_dual_axis_comparison(
         handles=legend_handles,
         #loc="upper right",
         frameon=True,
-        fontsize=10,
+        fontsize=PLOT_LEGEND_SIZE,
         bbox_to_anchor=(0.35, 1.2), 
         loc=2, 
         borderaxespad=0.
@@ -508,8 +530,8 @@ def plot_residue_information_gain(
     )
     ax.set_xlabel("Residue")
     ax.set_ylabel("Normalised KL contribution")
-    ax.tick_params(axis="x", rotation=90, labelsize=9)
-    ax.legend(title=None, fontsize=9)
+    ax.tick_params(axis="x", rotation=90, labelsize=PLOT_TICK_SIZE)
+    ax.legend(title=None, fontsize=PLOT_LEGEND_SIZE)
     fig.tight_layout()
     if save_path:
         _save_figure_with_pdf(fig, save_path, dpi=600)
@@ -553,7 +575,7 @@ def plot_kl_divergence_scatter(
     )
     ax.set_xlim(0, max_value * 1.14)
     ax.set_ylim(0, max_value * 1.14)
-    _annotate_scatter_labels(ax, x_data, y_data, labels, fontsize=8, point_size=70)
+    _annotate_scatter_labels(ax, x_data, y_data, labels, fontsize=PLOT_TICK_SIZE, point_size=70)
     ax.set_xlabel(r"Normalised $KL_{ground}$")
     ax.set_ylabel(r"Normalised $KL_{exc}$")
     ax.set_title(f"{molecule_name}: KL ground vs. excited")
@@ -626,12 +648,12 @@ def plot_kl_divergence_line_comparison(
 
     ymax = float(max(np.max(ground_data), np.max(exc_data), 1e-12))
     ax.set_ylim(0, ymax * 1.15)
-    ax.set_xlabel("Amino acid", fontsize=13, fontweight="bold")
-    ax.set_ylabel("Normalised KL contribution", fontsize=12, fontweight="bold")
-    ax.set_title(f"{molecule_name}: Residue KL divergence", fontsize=13, fontweight="bold")
+    ax.set_xlabel("Amino acid", fontsize=PLOT_LABEL_SIZE, fontweight="bold")
+    ax.set_ylabel("Normalised KL contribution", fontsize=PLOT_LABEL_SIZE, fontweight="bold")
+    ax.set_title(f"{molecule_name}: Residue KL divergence", fontsize=PLOT_TITLE_SIZE, fontweight="bold")
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, rotation=90, ha="right", fontsize=10)
-    ax.legend(title=None, frameon=True, fontsize=10)
+    ax.set_xticklabels(labels, rotation=90, ha="right", fontsize=PLOT_TICK_SIZE, fontweight="bold")
+    ax.legend(title=None, frameon=True, fontsize=PLOT_LEGEND_SIZE)
     ax.grid(False)
     sns.despine(ax=ax)
     fig.tight_layout()
@@ -673,8 +695,8 @@ def plot_stability_vs_information(
     )
     ax.set_xlabel("Amino acid")
     ax.set_ylabel("Ground-state probability / normalised KL contribution")
-    ax.tick_params(axis="x", rotation=90, labelsize=9)
-    ax.legend(title=None, fontsize=9)
+    ax.tick_params(axis="x", rotation=90, labelsize=PLOT_TICK_SIZE)
+    ax.legend(title=None, fontsize=PLOT_LEGEND_SIZE)
     fig.tight_layout()
     if save_path:
         _save_figure_with_pdf(fig, save_path, dpi=600)
@@ -702,8 +724,8 @@ def plot_directional_excitation_information_heatmap(
     ax.set_xlabel("Residue index")
     ax.set_ylabel("Residue index")
     ax.xaxis.tick_top()
-    ax.tick_params(axis="x", top=True, bottom=False, rotation=90, labelsize=7)
-    ax.tick_params(axis="y", labelsize=7)
+    ax.tick_params(axis="x", top=True, bottom=False, rotation=90, labelsize=PLOT_TICK_SIZE)
+    ax.tick_params(axis="y", labelsize=PLOT_TICK_SIZE)
     fig.tight_layout()
     if save_path:
         _save_figure_with_pdf(fig, save_path, dpi=600)
@@ -719,7 +741,7 @@ def plot_pairwise_matrix_heatmap(
     fig_size: Optional[tuple[float, float]] = None,
     save_path: Optional[str] = None,
     fig_num: Optional[int] = None,
-    font_size: int = 10,
+    font_size: int = 12,
     annotate: bool = False,
 ):
     del fig_num
@@ -755,7 +777,7 @@ def plot_pairwise_matrix_heatmap(
         square=True,
         annot=annotate,
         fmt=".2f",
-        annot_kws={"size": max(font_size - 2, 7), "color": "black", "weight": "normal"},
+        annot_kws={"size": max(font_size - 1, 9), "color": "black", "weight": "bold"},
         xticklabels=labels,
         yticklabels=labels,
         vmin=0.0,
@@ -763,13 +785,13 @@ def plot_pairwise_matrix_heatmap(
         mask=zero_mask,
     )
     ax.set_facecolor("white")
-    ax.set_title(title, fontsize=font_size + 3, pad=14, fontweight="bold")
-    ax.set_xlabel("Residue", fontsize=font_size + 1, labelpad=10)
-    ax.set_ylabel("Residue", fontsize=font_size + 1, labelpad=10)
+    ax.set_title(title, fontsize=font_size + 4, pad=14, fontweight="bold")
+    ax.set_xlabel("Residue", fontsize=font_size + 2, labelpad=10, fontweight="bold")
+    ax.set_ylabel("Residue", fontsize=font_size + 2, labelpad=10, fontweight="bold")
 
     cbar = hm.collections[0].colorbar
     if cbar is not None:
-        cbar.set_label(colorbar_label, fontsize=font_size + 1, labelpad=10)
+        cbar.set_label(colorbar_label, fontsize=font_size + 2, labelpad=10, fontweight="bold")
         cbar.ax.tick_params(labelsize=font_size)
 
     ax.tick_params(axis="x", top=False, bottom=True, rotation=90, labelsize=font_size)
@@ -861,11 +883,11 @@ def plot_joint_state_frequencies(
             xticklabels=labels,
             yticklabels=labels,
         )
-        ax.set_title(title)
-        ax.set_xlabel("Residue index")
-        ax.set_ylabel("Residue index")
-        ax.tick_params(axis="x", rotation=90, labelsize=7)
-        ax.tick_params(axis="y", labelsize=7)
+        ax.set_title(title, fontsize=PLOT_TITLE_SIZE, fontweight="bold")
+        ax.set_xlabel("Residue index", fontsize=PLOT_LABEL_SIZE, fontweight="bold")
+        ax.set_ylabel("Residue index", fontsize=PLOT_LABEL_SIZE, fontweight="bold")
+        ax.tick_params(axis="x", rotation=90, labelsize=PLOT_TICK_SIZE)
+        ax.tick_params(axis="y", labelsize=PLOT_TICK_SIZE)
 
     fig.tight_layout(rect=[0, 0, 1, 1])
     if save_path:
@@ -931,8 +953,8 @@ def plot_ground_state_comparison(
     ax.set_xlabel("Amino acid")
     ax.set_ylabel("P_ground")
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, rotation=90, ha="right", fontsize=9)
-    ax.legend(title=None, fontsize=9, frameon=True)
+    ax.set_xticklabels(labels, rotation=90, ha="right", fontsize=PLOT_TICK_SIZE, fontweight="bold")
+    ax.legend(title=None, fontsize=PLOT_LEGEND_SIZE, frameon=True)
     ax.grid(False)
     sns.despine(ax=ax)
     fig.tight_layout()
@@ -1037,9 +1059,9 @@ def plot_dual_axis_line_comparison(
         zorder=3,
     )
 
-    ax1.set_xlabel(r"Amino Acid", fontsize=13, fontweight="bold")
-    ax1.set_ylabel(metric1_label, fontsize=12, color=color1, fontweight="bold")
-    ax1.tick_params(axis="y", labelcolor=color1, labelsize=11)
+    ax1.set_xlabel(r"Amino Acid", fontsize=PLOT_LABEL_SIZE, fontweight="bold")
+    ax1.set_ylabel(metric1_label, fontsize=PLOT_LABEL_SIZE, color=color1, fontweight="bold")
+    ax1.tick_params(axis="y", labelcolor=color1, labelsize=PLOT_TICK_SIZE)
     ax1.set_ylim(0, max(metric1_data) * 1.15)
 
     # Create secondary y-axis
@@ -1057,8 +1079,8 @@ def plot_dual_axis_line_comparison(
         zorder=3,
     )
 
-    ax2.set_ylabel(f"{metric2_label} (normalised)", fontsize=12, color=color2, fontweight="bold")
-    ax2.tick_params(axis="y", labelcolor=color2, labelsize=11)
+    ax2.set_ylabel(f"{metric2_label} (normalised)", fontsize=PLOT_LABEL_SIZE, color=color2, fontweight="bold")
+    ax2.tick_params(axis="y", labelcolor=color2, labelsize=PLOT_TICK_SIZE)
     ax2.set_ylim(0, max(metric2_data) * 1.15)
 
     # Vertical connector lines: from the metric1 point (ax1 data coords) to
@@ -1083,7 +1105,7 @@ def plot_dual_axis_line_comparison(
 
     # X-axis configuration
     ax1.set_xticks(x)
-    ax1.set_xticklabels(residues, rotation=90, ha="right", fontsize=10)
+    ax1.set_xticklabels(residues, rotation=90, ha="right", fontsize=PLOT_TICK_SIZE, fontweight="bold")
 
     # Combined legend
     legend_handles = [
@@ -1095,7 +1117,7 @@ def plot_dual_axis_line_comparison(
     ax1.legend(
         handles=legend_handles,
         frameon=True,
-        fontsize=10,
+        fontsize=PLOT_LEGEND_SIZE,
         bbox_to_anchor=(0.35, 1.2),
         loc=2,
         borderaxespad=0.0,
@@ -1224,7 +1246,7 @@ def plot_stability_vs_sensitivity_quadrants(
             x_data,
             y_data,
             residues,
-            fontsize=8,
+            fontsize=PLOT_TICK_SIZE,
             point_size=70,
         )
 
@@ -1232,9 +1254,9 @@ def plot_stability_vs_sensitivity_quadrants(
     ax.axvline(x_threshold, color=quadrant_line_color, linestyle="--", linewidth=1.2, zorder=1)
     ax.axhline(y_threshold, color=quadrant_line_color, linestyle="--", linewidth=1.2, zorder=1)
 
-    ax.set_xlabel(metric1_label, fontsize=13, fontweight="bold")
-    ax.set_ylabel(f"{metric2_label} (normalised)", fontsize=13, fontweight="bold")
-    ax.set_title(f"{molecule_name}: Stability vs. Energetic Sensitivity", fontsize=13, fontweight="bold")
+    ax.set_xlabel(metric1_label, fontsize=PLOT_LABEL_SIZE, fontweight="bold")
+    ax.set_ylabel(f"{metric2_label} (normalised)", fontsize=PLOT_LABEL_SIZE, fontweight="bold")
+    ax.set_title(f"{molecule_name}: Stability vs. Energetic Sensitivity", fontsize=PLOT_TITLE_SIZE, fontweight="bold")
 
     ax.grid(False)
     sns.despine(ax=ax)
