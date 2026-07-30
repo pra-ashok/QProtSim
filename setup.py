@@ -39,10 +39,11 @@ setup(
         # Note: cupy must be installed via conda: conda install cupy cuda-version=13.1 -c conda-forge
         'reportlab',
         'pyyaml',
-        'seaborn',
+        'seaborn >=0.13.2',
         'pillow',   
         'pymol-open-source',  # Molecular visualization for structure rendering
         'psutil',
+        'pennylane-qiskit'
     ],
     extras_require={
         "dev": [
