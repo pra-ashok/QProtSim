@@ -369,8 +369,8 @@ def plot_dual_axis_comparison(
     molecule_name: str = "Trp Cage",
     metric1_col: str = "p_ground",
     metric2_col: str = "KL_exc",
-    metric1_label: str = r"Stability $P_{ground}$",
-    metric2_label: str = r"Energetic Sensitivity $\mathfrak{I}_{\mathrm{exc}}$",
+    metric1_label: str = r"Stability",
+    metric2_label: str = r"Energetic Sensitivity",
     color1: str = "#2C3E50",
     color2: str = "#E74C3C",
     figsize: tuple[float, float] = (10, 5),
@@ -474,9 +474,10 @@ def plot_dual_axis_comparison(
     ax1.legend(
         handles=legend_handles,
         #loc="upper right",
+        handleLength=5.0,
         frameon=True,
         fontsize=PLOT_LEGEND_SIZE,
-        bbox_to_anchor=(0.35, 1.2), 
+        bbox_to_anchor=(0.35, 1.4), 
         loc=2, 
         borderaxespad=0.
     )
@@ -976,7 +977,7 @@ def plot_dual_axis_line_comparison(
     metric1_col: str = "p_ground",
     metric2_col: str = "KL_exc",
     metric1_label: str = r"Stability $P_{ground}$",
-    metric2_label: str = r"Energetic Sensitivity $\mathfrak{I}_{\mathrm{exc}}$",
+    metric2_label: str = "Energetic Sensitivity \n" + r"$\mathfrak{I}_{\mathrm{exc}}$",
     color1: str = "#2C3E50",
     color2: str = "#E74C3C",
     connector_color: str = "#999999",
@@ -1117,8 +1118,8 @@ def plot_dual_axis_line_comparison(
     ax1.legend(
         handles=legend_handles,
         frameon=True,
-        fontsize=PLOT_LEGEND_SIZE,
-        bbox_to_anchor=(0.35, 1.2),
+        fontsize=PLOT_LEGEND_SIZE-4,
+        bbox_to_anchor=(0.35, 1.25),
         loc=2,
         borderaxespad=0.0,
     )
@@ -1149,7 +1150,7 @@ def plot_stability_vs_sensitivity_quadrants(
     metric1_col: str = "p_ground",
     metric2_col: str = "KL_exc",
     metric1_label: str = r"Stability $P_{ground}$",
-    metric2_label: str = r"Energetic Sensitivity $\mathfrak{I}_{\mathrm{exc}}$",
+    metric2_label: str = "Energetic Sensitivity \n" + r"$\mathfrak{I}_{\mathrm{exc}}$",
     quadrant_method: str = "mean",
     x_threshold: Optional[float] = None,
     y_threshold: Optional[float] = None,
