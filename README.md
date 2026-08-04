@@ -853,5 +853,9 @@ This project is distributed under the MIT License. See `LICENSE`.
 
 ## Citation
 
-If you use `QProtSim` in a manuscript, cite the repository and include the exact
+If you use `QProtSim` in your research/publication, cite the repository and include the exact
 software version or commit hash used to generate results.
+Repo: https://github.com/pra-ashok/QProtSim 
+
+Publication citation: 
+Pratik Patil, Bhushan Bonde and Bhaskar Choubey, Quantum Circuit–Based Protein Modelling Reveals Distal Energetic Couplings in Protein, (2026), Preprint (To be communicated).
