@@ -1,9 +1,13 @@
 # setup.py
+import re
 from setuptools import setup, find_packages
+
+with open('src/qprotsim/__init__.py') as f:
+    version = re.search(r"__version__ = ['\"]([^'\"]+)['\"]", f.read()).group(1)
 
 setup(
     name='qprotsim',
-    version='0.6.0',
+    version=version,
     author='Pratik Patil, Bhushan Bonde',
     author_email='p.patil@uos.ac.uk, b.bonde@uos.ac.uk',
     description='A package for thermodynamic modeling of proteins with Quantum computers',
@@ -83,7 +87,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'protqc=protqc.__main__:main',
+            'qprotsim=qprotsim.__main__:main',
         ],
     },
 )
