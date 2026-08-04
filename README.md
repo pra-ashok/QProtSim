@@ -1,6 +1,6 @@
-# protqc
+# QProtSim
 
-`protqc` is a Python package and command-line workflow for residue-level
+`QProtSim` is a Python package and command-line workflow for residue-level
 thermodynamic analysis of protein structures using quantum-circuit sampling.
 It maps a PDB structure to a residue graph, estimates solvent-accessible
 surface area (SASA), builds residue-residue coupling terms, samples a
@@ -14,7 +14,7 @@ CLI also supports batch analysis from PDB identifiers.
 
 Proteins encode stability, conformational response, and long-range residue
 communication through a heterogeneous network of solvent exposure, residue
-chemistry, and structural contacts. `protqc` models this network by assigning
+chemistry, and structural contacts. `QProtSim` models this network by assigning
 each residue a two-state thermodynamic variable: a ground-like solvation state
 and an excited solvation state. Solvent-accessible surface area provides the
 local environmental signal, residue-specific transfer free energies provide the
@@ -26,7 +26,7 @@ The resulting residue graph is encoded as a quantum circuit in which local
 rotations initialize residue excitation propensities and entangling layers
 redistribute excitation according to Kij-weighted thermodynamic driving terms.
 Sampling the circuit yields an ensemble of residue state configurations from
-which `protqc` estimates total energy distributions, residue-level stability
+which `QProtSim` estimates total energy distributions, residue-level stability
 and sensitivity metrics, pairwise mutual information, directional excitation
 information, and joint-state frequencies. These outputs are intended to help
 identify residues that are energetically stable, conformationally sensitive, or
@@ -73,14 +73,14 @@ sudo apt-get install -y freesasa build-essential
 Create and activate an environment:
 
 ```bash
-conda create -n protqc python=3.11 -y
-conda activate protqc
+conda create -n QProtSim python=3.11 -y
+conda activate QProtSim
 ```
 
 Install the package from the repository root:
 
 ```bash
-cd /path/to/protqc
+cd /path/to/QProtSim
 pip install .
 ```
 
@@ -92,7 +92,7 @@ pip install -e ".[dev]"
 
 ### GPU Setup
 
-`protqc` defaults to `lightning.gpu`. If the GPU plugin or CUDA runtime is not
+`QProtSim` defaults to `lightning.gpu`. If the GPU plugin or CUDA runtime is not
 available, the device creation code falls back to `default.qubit` for circuit
 execution. For reproducible GPU execution, install CuPy and CUDA through conda:
 
@@ -101,7 +101,7 @@ conda install cupy cuda-version=13.1 -c conda-forge
 ```
 
 The repository also includes `run_with_cuda.sh`, a local wrapper that sets CUDA
-environment variables and then runs `protqc`. Edit the paths in that script if
+environment variables and then runs `QProtSim`. Edit the paths in that script if
 your conda environment is located elsewhere.
 
 ## Quick Start
@@ -116,14 +116,14 @@ protein_only: true
 shots: 100000
 pl_device: lightning.gpu
 bins: 10000
-output_dir: /absolute/path/to/protqc_outputs
+output_dir: /absolute/path/to/QProtSim_outputs
 report_file_name: trp_cage_report.pdf
 ```
 
 Run the analysis:
 
 ```bash
-protqc analyze -c config.yaml
+QProtSim analyze -c config.yaml
 ```
 
 The command writes the report PDF and all companion artifacts into
@@ -142,7 +142,7 @@ protein_only: true
 shots: 100000
 pl_device: lightning.gpu
 bins: 10000
-output_dir: /absolute/path/to/protqc_outputs
+output_dir: /absolute/path/to/QProtSim_outputs
 report_file_name: trp_cage_report.pdf
 ```
 
@@ -151,31 +151,31 @@ report_file_name: trp_cage_report.pdf
 Show top-level help:
 
 ```bash
-protqc --help
+QProtSim --help
 ```
 
 Run a single analysis:
 
 ```bash
-protqc analyze -c config.yaml
+QProtSim analyze -c config.yaml
 ```
 
 Override the output directory:
 
 ```bash
-protqc analyze -c config.yaml --output-dir results/trp_cage
+QProtSim analyze -c config.yaml --output-dir results/trp_cage
 ```
 
 Override the report path:
 
 ```bash
-protqc analyze -c config.yaml --report results/trp_cage/report.pdf
+QProtSim analyze -c config.yaml --report results/trp_cage/report.pdf
 ```
 
 Enable verbose debug output from the information-theory and circuit routines:
 
 ```bash
-protqc analyze -c config.yaml --debug
+QProtSim analyze -c config.yaml --debug
 ```
 
 Accepted aliases for `analyze` are `analyse`, `analysis`, and
@@ -187,7 +187,7 @@ The CLI includes a preprocessing entry point for extracting molecular graph
 features from a PDB file:
 
 ```bash
-protqc preprocess \
+QProtSim preprocess \
   --pdb input.pdb \
   --selection protein \
   --chain A \
@@ -195,14 +195,14 @@ protqc preprocess \
 ```
 
 At present this command parses and reports the requested preprocessing options.
-The full report-producing workflow is `protqc analyze`.
+The full report-producing workflow is `QProtSim analyze`.
 
 ### Basin Command
 
 Run basin analysis from sampled states and optional reference energy arrays:
 
 ```bash
-protqc basin \
+QProtSim basin \
   --z_samples outputs/trp_cage_z_samples.csv \
   --basins -60 -40 -40 -20 \
   --out basin_results.csv
@@ -226,7 +226,7 @@ Single-run configurations must include either `pdb_path` or `pdb_code`, plus
 | `shots` | no | `100000` | Number of circuit samples. Increase for smoother ensemble statistics. |
 | `pl_device` | no | `lightning.gpu` | PennyLane device name. Falls back to `default.qubit` if unavailable. |
 | `bins` | no | `1000` | Number of bins for energy histograms and KL calculations. |
-| `output_dir` | no | `<config_dir>/protqc_outputs` | Directory for report assets and CSV files. |
+| `output_dir` | no | `<config_dir>/QProtSim_outputs` | Directory for report assets and CSV files. |
 | `report_file_name` | no | `report.pdf` | PDF filename written at the root of `output_dir`. |
 | `download_dir` | no | current working directory | Directory for downloaded PDB files when `pdb_code` is used. |
 | `force_download` | no | `false` | Re-download the PDB file even if a cached file exists. |
@@ -264,7 +264,7 @@ report_file_name: "{pdb_code}_report.pdf"
 Run:
 
 ```bash
-protqc analyze -c batch_config.yaml
+QProtSim analyze -c batch_config.yaml
 ```
 
 Each protein is written to its own subdirectory under `output_dir`, for example
@@ -331,8 +331,8 @@ the core functions directly:
 ```python
 from pathlib import Path
 
-from protqc.circuit import Config
-from protqc.report_analysis import run_analysis, generate_report
+from QProtSim.circuit import Config
+from QProtSim.report_analysis import run_analysis, generate_report
 
 cfg = Config(
     pdb_path="/absolute/path/to/1L2Y.pdb",
@@ -345,12 +345,12 @@ outputs = run_analysis(
     cfg=cfg,
     molecule_name="Trp Cage",
     chain="A",
-    output_dir=Path("protqc_outputs"),
+    output_dir=Path("QProtSim_outputs"),
     bins=10000,
 )
 
 generate_report(
-    output_path=Path("protqc_outputs/trp_cage_report.pdf"),
+    output_path=Path("QProtSim_outputs/trp_cage_report.pdf"),
     molecule_name="Trp Cage",
     cfg=cfg,
     chain="A",
@@ -362,7 +362,7 @@ For a YAML-driven run from Python:
 
 ```python
 from pathlib import Path
-from protqc.report_analysis import run_analysis_from_yaml
+from QProtSim.report_analysis import run_analysis_from_yaml
 
 report_path = run_analysis_from_yaml(Path("config.yaml"))
 print(report_path)
@@ -376,7 +376,7 @@ helpers and should be treated as unstable.
 
 ### Core Configuration
 
-`protqc.circuit.Config`
+`QProtSim.circuit.Config`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -387,13 +387,13 @@ helpers and should be treated as unstable.
 
 ### Report and Workflow Functions
 
-`protqc.report_analysis.load_yaml_config(path)`
+`QProtSim.report_analysis.load_yaml_config(path)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `path` | `Path` | YAML config file to load. The file must contain a mapping of option names to values. |
 
-`protqc.report_analysis.run_analysis_from_yaml(config_path, output_dir=None, report_filename=None)`
+`QProtSim.report_analysis.run_analysis_from_yaml(config_path, output_dir=None, report_filename=None)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -401,14 +401,14 @@ helpers and should be treated as unstable.
 | `output_dir` | `Path` or `None` | Optional override for the artifact directory. Takes priority over `output_dir` in the YAML file. |
 | `report_filename` | `str` or `None` | Optional report PDF filename. The report is written at the root of the resolved output directory. |
 
-`protqc.report_analysis.run_batch_analysis_from_yaml(config_path, output_dir=None)`
+`QProtSim.report_analysis.run_batch_analysis_from_yaml(config_path, output_dir=None)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `config_path` | `Path` | YAML file with `batch_mode: true` and a `pdb_codes` list. Common analysis settings are applied to each protein. |
 | `output_dir` | `Path` or `None` | Optional base directory for all batch outputs. Each PDB code receives its own subdirectory. |
 
-`protqc.report_analysis.run_analysis(cfg, molecule_name, chain, output_dir, bins=1000, run_stamp=None)`
+`QProtSim.report_analysis.run_analysis(cfg, molecule_name, chain, output_dir, bins=1000, run_stamp=None)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -419,7 +419,7 @@ helpers and should be treated as unstable.
 | `bins` | `int` | Number of bins used for energy histograms and KL calculations. |
 | `run_stamp` | `str` or `None` | Optional timestamp string used for reproducible figure naming. If omitted, the function creates one. |
 
-`protqc.report_analysis.generate_report(output_path, molecule_name, cfg, chain, outputs)`
+`QProtSim.report_analysis.generate_report(output_path, molecule_name, cfg, chain, outputs)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -429,7 +429,7 @@ helpers and should be treated as unstable.
 | `chain` | `str` or `None` | Chain label reported in the run summary. |
 | `outputs` | `AnalysisOutputs` | Object returned by `run_analysis`; contains data frames, matrices, figures, and run metadata. |
 
-`protqc.pipeline.run_pipeline(cfg, molecule_name, chain="A", plot_energy=True, bins=1, plot_path=None, save_scatter_plot=True, scatter_plot_path=None)`
+`QProtSim.pipeline.run_pipeline(cfg, molecule_name, chain="A", plot_energy=True, bins=1, plot_path=None, save_scatter_plot=True, scatter_plot_path=None)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -442,14 +442,14 @@ helpers and should be treated as unstable.
 | `save_scatter_plot` | `bool` | When `True`, also saves the energy density plot. |
 | `scatter_plot_path` | `str` or `None` | Optional path for the energy density plot. If omitted, a default path is derived from `molecule_name` or `plot_path`. |
 
-`protqc.pipeline.export_residue_statistics(results, out_csv="residue_propensity.csv")`
+`QProtSim.pipeline.export_residue_statistics(results, out_csv="residue_propensity.csv")`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `results` | `dict` | Output dictionary from `run_pipeline`; must include residue names, SASA values, excitation propensities, and sampled ground-state probabilities. |
 | `out_csv` | `str` | Destination CSV path for per-residue statistics. |
 
-`protqc.pipeline.export_entanglement_parameters(results, out_csv="entanglement_parameters.csv", yy_cap=np.pi/6, yy_probability_threshold=0.02, apply_yy_diffusion=True)`
+`QProtSim.pipeline.export_entanglement_parameters(results, out_csv="entanglement_parameters.csv", yy_cap=np.pi/6, yy_probability_threshold=0.02, apply_yy_diffusion=True)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -461,20 +461,20 @@ helpers and should be treated as unstable.
 
 ### PDB, Download, and SASA Helpers
 
-`protqc.helper.compute_file_checksum(file_path, algorithm="sha256")`
+`QProtSim.helper.compute_file_checksum(file_path, algorithm="sha256")`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `file_path` | `str` | File whose checksum should be computed. |
 | `algorithm` | `str` | Hash algorithm accepted by `hashlib`, such as `md5`, `sha1`, or `sha256`. |
 
-`protqc.helper.get_pdb_checksum(pdb_code)`
+`QProtSim.helper.get_pdb_checksum(pdb_code)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `pdb_code` | `str` | Four-character RCSB PDB identifier. Used to query remote ETag/checksum metadata. |
 
-`protqc.helper.verify_pdb_file(file_path, pdb_code, expected_checksum=None)`
+`QProtSim.helper.verify_pdb_file(file_path, pdb_code, expected_checksum=None)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -482,7 +482,7 @@ helpers and should be treated as unstable.
 | `pdb_code` | `str` | PDB code used in warning and error messages. |
 | `expected_checksum` | `str` or `None` | Optional expected checksum. When omitted, only existence and basic file-size checks are performed. |
 
-`protqc.helper.fetch_pdb(pdb_code, output_dir=None, force_download=False, verify_checksum=True)`
+`QProtSim.helper.fetch_pdb(pdb_code, output_dir=None, force_download=False, verify_checksum=True)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -491,7 +491,7 @@ helpers and should be treated as unstable.
 | `force_download` | `bool` | Re-download even if a local file already exists. |
 | `verify_checksum` | `bool` | Validate downloaded or cached files when checksum metadata is available. |
 
-`protqc.helper.batch_fetch_pdb(pdb_codes, output_dir=None, force_download=False, verify_checksum=True, delay=0.5)`
+`QProtSim.helper.batch_fetch_pdb(pdb_codes, output_dir=None, force_download=False, verify_checksum=True, delay=0.5)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -501,7 +501,7 @@ helpers and should be treated as unstable.
 | `verify_checksum` | `bool` | Validate files when remote checksum metadata is available. |
 | `delay` | `float` | Delay in seconds between downloads to avoid overloading RCSB services. |
 
-`protqc.helper.per_residue_sasa(pdb_path, chain="A", protein_only=True)`
+`QProtSim.helper.per_residue_sasa(pdb_path, chain="A", protein_only=True)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -509,7 +509,7 @@ helpers and should be treated as unstable.
 | `chain` | `str` or `None` | Chain filter. Use `None` to include all chains. |
 | `protein_only` | `bool` | When `True`, keep only standard amino-acid residues. |
 
-`protqc.helper.map_sasa_to_mda_resorder(u, sasa_dict, protein_only=True, chain="A")`
+`QProtSim.helper.map_sasa_to_mda_resorder(u, sasa_dict, protein_only=True, chain="A")`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -518,7 +518,7 @@ helpers and should be treated as unstable.
 | `protein_only` | `bool` | Match the residue filter used during SASA calculation. |
 | `chain` | `str` or `None` | Chain filter matching the analysis target. |
 
-`protqc.helper.per_residue_ke(u, T=300.0, protein_only=True, seed=None)`
+`QProtSim.helper.per_residue_ke(u, T=300.0, protein_only=True, seed=None)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -529,7 +529,7 @@ helpers and should be treated as unstable.
 
 ### Coupling and Circuit Functions
 
-`protqc.coupling_factor.build_Kij_pairs(u, protein_only=True, chain="A", exclude_bonded=False, min_seq_separation=1, use_pbc=False, weights=None, omega=None, sigma_omega=None, estimate_omega_from_local_stiffness=True, normalize=True, return_terms=True)`
+`QProtSim.coupling_factor.build_Kij_pairs(u, protein_only=True, chain="A", exclude_bonded=False, min_seq_separation=1, use_pbc=False, weights=None, omega=None, sigma_omega=None, estimate_omega_from_local_stiffness=True, normalize=True, return_terms=True)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -546,13 +546,13 @@ helpers and should be treated as unstable.
 | `normalize` | `bool` | Normalize final Kij values by the maximum Kij so couplings are on a comparable scale. |
 | `return_terms` | `bool` | Return decomposed term values for reporting and heatmaps. |
 
-`protqc.circuit.energies_ref(energies_ref="bulky")`
+`QProtSim.circuit.energies_ref(energies_ref="bulky")`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `energies_ref` | `str` | Select reference energy table. Use `"bulky"` for octanol-like transfer values or `"alkyl"` for alkyl-chain values. |
 
-`protqc.circuit.compute_directed_transfer_schedule(exc_propensities, pairs, kijs, E0, E1, beta=1.0, eps=1.0e-12, gamma=0.95, max_layers=None, min_deltaP=0.0, phi_scale=1.0, phi_cap=np.pi/2, discount_start_power=1)`
+`QProtSim.circuit.compute_directed_transfer_schedule(exc_propensities, pairs, kijs, E0, E1, beta=1.0, eps=1.0e-12, gamma=0.95, max_layers=None, min_deltaP=0.0, phi_scale=1.0, phi_cap=np.pi/2, discount_start_power=1)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -570,7 +570,7 @@ helpers and should be treated as unstable.
 | `phi_cap` | `float` or `None` | Maximum absolute CRY angle. Use `None` for no cap. |
 | `discount_start_power` | `int` | Power used for the first gamma discount. Use `0` for undiscounted first layer or `1` for `gamma` on layer one. |
 
-`protqc.circuit.prepare_state_propensity(exc_propensities, kij_pairs, kijs, E0, E1, yy_cap=np.pi/6, apply_yy_diffusion=True, return_schedule=True, yy_probability_threshold=0.02)`
+`QProtSim.circuit.prepare_state_propensity(exc_propensities, kij_pairs, kijs, E0, E1, yy_cap=np.pi/6, apply_yy_diffusion=True, return_schedule=True, yy_probability_threshold=0.02)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -584,7 +584,7 @@ helpers and should be treated as unstable.
 | `return_schedule` | `bool` | Return the computed transfer schedule after applying gates. |
 | `yy_probability_threshold` | `float` | Threshold below which a transfer is treated as weak diffusion. |
 
-`protqc.circuit.sample_bits(exc_propensities, kij_pairs, kijs, E0, E1, cfg, return_schedule=False)`
+`QProtSim.circuit.sample_bits(exc_propensities, kij_pairs, kijs, E0, E1, cfg, return_schedule=False)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -596,7 +596,7 @@ helpers and should be treated as unstable.
 | `cfg` | `Config` | Supplies shot count and PennyLane device. |
 | `return_schedule` | `bool` | When `True`, returns `(samples, entanglement_schedule)` instead of only the sample matrix. |
 
-`protqc.circuit.energy_from_samples(Z_samples, E0, E1)`
+`QProtSim.circuit.energy_from_samples(Z_samples, E0, E1)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -604,7 +604,7 @@ helpers and should be treated as unstable.
 | `E0` | `np.ndarray` | Ground-state residue energies. |
 | `E1` | `np.ndarray` | Excited-state residue energies. |
 
-`protqc.circuit.per_residue_energies(resnames)`
+`QProtSim.circuit.per_residue_energies(resnames)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -629,7 +629,7 @@ Additional public circuit helpers:
 
 ### Information-Theory and Allostery Functions
 
-`protqc.info_theory.residue_information_gain(Z_samples, E_total, bins=10000)`
+`QProtSim.info_theory.residue_information_gain(Z_samples, E_total, bins=10000)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -637,27 +637,27 @@ Additional public circuit helpers:
 | `E_total` | `np.ndarray` | Total energy for each sampled configuration. Must align with the rows of `Z_samples`. |
 | `bins` | `int` | Number of energy bins for KL divergence estimates. |
 
-`protqc.info_theory.directional_excitation_information(Z_samples, threshold=0.0)`
+`QProtSim.info_theory.directional_excitation_information(Z_samples, threshold=0.0)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `Z_samples` | `np.ndarray` | Sample matrix of shape `(shots, n_res)`. |
 | `threshold` | `float` | Optional noise floor subtracted from each directional score after KL calculation. |
 
-`protqc.info_theory.mutual_information_matrix(Z_samples, eps=1e-12)`
+`QProtSim.info_theory.mutual_information_matrix(Z_samples, eps=1e-12)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `Z_samples` | `np.ndarray` | Sample matrix used to compute pairwise residue mutual information. |
 | `eps` | `float` | Small value added for numerical stability in probability ratios. |
 
-`protqc.info_theory.joint_state_matrices(Z_samples)`
+`QProtSim.info_theory.joint_state_matrices(Z_samples)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `Z_samples` | `np.ndarray` | Sample matrix used to count `(0,0)`, `(0,1)`, `(1,0)`, and `(1,1)` pair states. |
 
-`protqc.info_theory.compute_static_mi_from_counts(counts_00, counts_01, counts_10, counts_11, eps=1e-12)`
+`QProtSim.info_theory.compute_static_mi_from_counts(counts_00, counts_01, counts_10, counts_11, eps=1e-12)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -667,7 +667,7 @@ Additional public circuit helpers:
 | `counts_11` | `np.ndarray` | Pairwise count/probability matrix for both residues excited. |
 | `eps` | `float` | Numerical guard for logarithms and divisions. |
 
-`protqc.info_theory.analyse_motif_allostery(...)`
+`QProtSim.info_theory.analyse_motif_allostery(...)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -736,7 +736,7 @@ Individual plotting functions:
 | `plot_dual_axis_line_comparison(info_df, results_df, results, molecule_name="Trp Cage", metric1_col="p_ground", metric2_col="KL_exc", metric1_label=..., metric2_label=..., color1=..., color2=..., connector_color=..., connector_alpha=0.6, connector_linewidth=0.9, figsize=(10, 5), save_path=..., dpi=600, fig_num=None)` | Dual-axis line version of the stability/sensitivity comparison. |
 | `plot_stability_vs_sensitivity_quadrants(info_df, results_df, results, molecule_name="Trp Cage", metric1_col="p_ground", metric2_col="KL_exc", metric1_label=..., metric2_label=..., quadrant_method="mean", x_threshold=None, y_threshold=None, point_color=..., quadrant_line_color=..., annotate_residues=True, figsize=(7, 7), save_path=..., dpi=600, fig_num=None)` | Quadrant scatter plot. `quadrant_method`, `x_threshold`, and `y_threshold` control the reference lines. |
 
-`protqc.structure_viz.get_structure_image(pdb_path, output_dir, pdb_code=None, chain="A", prefer_download=True, output_path=None)`
+`QProtSim.structure_viz.get_structure_image(pdb_path, output_dir, pdb_code=None, chain="A", prefer_download=True, output_path=None)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -747,7 +747,7 @@ Individual plotting functions:
 | `prefer_download` | `bool` | Try RCSB image download before local rendering. |
 | `output_path` | `Path` or `None` | Optional exact image path. If omitted, a default filename is used. |
 
-`protqc.structure_viz.render_structure_pymol(pdb_path, output_path, width=800, height=600, style="cartoon", color_scheme="spectrum", ray_trace=True)`
+`QProtSim.structure_viz.render_structure_pymol(pdb_path, output_path, width=800, height=600, style="cartoon", color_scheme="spectrum", ray_trace=True)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -759,7 +759,7 @@ Individual plotting functions:
 | `color_scheme` | `str` | Coloring mode: `spectrum`, `chain`, `secondary`, or `element`. |
 | `ray_trace` | `bool` | Use PyMOL ray tracing for higher quality output. |
 
-`protqc.structure_viz.optimize_image_for_report(image_path, max_width=800, max_height=600, quality=85)`
+`QProtSim.structure_viz.optimize_image_for_report(image_path, max_width=800, max_height=600, quality=85)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -850,5 +850,5 @@ This project is distributed under the MIT License. See `LICENSE`.
 
 ## Citation
 
-If you use `protqc` in a manuscript, cite the repository and include the exact
+If you use `QProtSim` in a manuscript, cite the repository and include the exact
 software version or commit hash used to generate results.
