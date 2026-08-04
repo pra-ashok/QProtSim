@@ -1,3 +1,21 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
+
+authors = [
+  { name="Dr Bhushan Bonde", email="b.bonde@uos.ac.uk" },
+  { name="Pratik Patil", email="p.patil@uos.ac.uk" }
+]
+description = "QprotSim: Modelling Protein Dynamics with Quantum Computing"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+
+[project.urls]
+Homepage = "https://github.com/pra-ashok/QProtSim"
+Issues = "https://github.com/pra-ashok/QProtSim/issues"
