@@ -8,7 +8,7 @@ warnings.filterwarnings("ignore")
 def main():
     parser = argparse.ArgumentParser(
         description=(
-            "protqc: A package for studying thermodynamic properties "
+            "qprotsim: A package for studying thermodynamic properties "
             "of proteins using Quantum Computing methods."
         ),
         epilog="Use '<command> --help' for more information on a specific command.",
@@ -176,8 +176,8 @@ def run_preprocess(args):
 
 
 def run_analyze(args):
-    from protqc.report_analysis import run_analysis_from_yaml, run_batch_analysis_from_yaml, load_yaml_config
-    import protqc.info_theory as info_theory
+    from qprotsim.report_analysis import run_analysis_from_yaml, run_batch_analysis_from_yaml, load_yaml_config
+    import qprotsim.info_theory as info_theory
 
     try:
         # Set debug mode if requested
@@ -235,7 +235,7 @@ def run_analyze(args):
 
 
 def run_basin(args):
-    from protqc.info_theory import run_basin as run_basin_analysis
+    from qprotsim.info_theory import run_basin as run_basin_analysis
 
     return run_basin_analysis(args)
 

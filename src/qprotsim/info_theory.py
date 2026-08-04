@@ -601,7 +601,7 @@ def _residue_coordinates_from_pdb(
         ) from exc
 
     try:
-        from protqc.helper import AA3
+        from qprotsim.helper import AA3
     except Exception:
         AA3 = None
 
@@ -1431,7 +1431,7 @@ def _build_motif_regions_from_structure(
     """
     import itertools
     import MDAnalysis as mda
-    from protqc.coupling_factor import build_Kij_pairs
+    from qprotsim.coupling_factor import build_Kij_pairs
 
     labels = [str(label) for label in residue_labels]
     n_res = len(labels)
@@ -2405,7 +2405,7 @@ def analyze_allostery(*args, **kwargs):
 def run_basin(args):
     import json
     import matplotlib.pyplot as plt
-    from protqc.plots import _save_figure_with_pdf, set_academic_style
+    from qprotsim.plots import _save_figure_with_pdf, set_academic_style
 
     z_df = pd.read_csv(args.z_samples)
     if z_df.shape[1] < 2:
@@ -2430,7 +2430,7 @@ def run_basin(args):
         E0 = np.asarray(np.load(args.E0, allow_pickle=False), dtype=float).reshape(-1)
         E1 = np.asarray(np.load(args.E1, allow_pickle=False), dtype=float).reshape(-1)
     else:
-        from protqc.circuit import energies_ref as circuit_energies_ref
+        from qprotsim.circuit import energies_ref as circuit_energies_ref
 
         residue_names = []
         for label in residue_labels:

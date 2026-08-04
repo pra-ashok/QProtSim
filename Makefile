@@ -14,7 +14,7 @@ install-dev:  ## Install package and development dependencies
 	pip install -e ".[dev]"
 
 test:  ## Run all tests
-	@pip show protqc > /dev/null 2>&1 || (echo "Error: protqc not installed. Run 'make install' or 'make install-dev' first." && exit 1)
+	@pip show qprotsim > /dev/null 2>&1 || (echo "Error: qprotsim not installed. Run 'make install' or 'make install-dev' first." && exit 1)
 	python -m pytest tests/ -v
 
 test-unit:  ## Run only unit tests
@@ -30,10 +30,10 @@ test-fast:  ## Run tests, skip slow ones
 	python -m pytest tests/ -m "not slow" -v
 
 test-coverage:  ## Run tests with coverage report
-	python -m pytest tests/ --cov=src/protqc --cov-report=html --cov-report=term-missing
+	python -m pytest tests/ --cov=src/qprotsim --cov-report=html --cov-report=term-missing
 
 test-coverage-xml:  ## Run tests with XML coverage (for CI)
-	python -m pytest tests/ --cov=src/protqc --cov-report=xml
+	python -m pytest tests/ --cov=src/qprotsim --cov-report=xml
 
 test-parallel:  ## Run tests in parallel
 	python -m pytest tests/ -n auto -v
@@ -64,17 +64,17 @@ clean:  ## Clean up test artifacts
 	find . -type f -name "*.pyc" -delete
 
 lint:  ## Run code linters
-	flake8 src/protqc tests/
-	pylint src/protqc
+	flake8 src/qprotsim tests/
+	pylint src/qprotsim
 
 format:  ## Format code with black
-	black src/protqc tests/
+	black src/qprotsim tests/
 
 format-check:  ## Check code formatting
-	black --check src/protqc tests/
+	black --check src/qprotsim tests/
 
 type-check:  ## Run type checking with mypy
-	mypy src/protqc
+	mypy src/qprotsim
 
 quality:  ## Run all quality checks
 	make format-check
@@ -95,7 +95,7 @@ profile:  ## Profile test execution
 
 # Development helpers
 shell:  ## Start IPython shell with package loaded
-	ipython -i -c "import sys; sys.path.insert(0, 'src'); from protqc import helper"
+	ipython -i -c "import sys; sys.path.insert(0, 'src'); from qprotsim import helper"
 
 jupyter:  ## Start Jupyter notebook
 	jupyter notebook

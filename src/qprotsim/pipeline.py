@@ -6,16 +6,16 @@ import numpy as np
 import MDAnalysis as mda
 import pandas as pd
 
-from protqc.circuit import (
+from qprotsim.circuit import (
     Config,
     energy_from_samples,
     excitation_propensities,
     per_residue_energies,
     sample_bits,
 )
-from protqc.coupling_factor import build_Kij_pairs
-from protqc.helper import map_sasa_to_mda_resorder, per_residue_sasa
-from protqc.plots import plot_energy_density, plot_energy_distribution_histogram
+from qprotsim.coupling_factor import build_Kij_pairs
+from qprotsim.helper import map_sasa_to_mda_resorder, per_residue_sasa
+from qprotsim.plots import plot_energy_density, plot_energy_distribution_histogram
 
 
 def _default_density_plot_path(molecule_name: str, plot_path: Optional[str]) -> str:

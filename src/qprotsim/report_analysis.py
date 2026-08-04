@@ -17,16 +17,16 @@ from reportlab.lib.units import inch
 from reportlab.lib.utils import ImageReader
 from reportlab.platypus import Image, KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from protqc.circuit import Config
-from protqc.info_theory import (
+from qprotsim.circuit import Config
+from qprotsim.info_theory import (
     analyse_motif_allostery,
     directional_excitation_information,
     joint_state_matrices,
     mutual_information_matrix,
     residue_information_gain,
 )
-from protqc.pipeline import export_entanglement_parameters, export_residue_statistics, run_pipeline
-from protqc.plots import (
+from qprotsim.pipeline import export_entanglement_parameters, export_residue_statistics, run_pipeline
+from qprotsim.plots import (
     plot_dual_axis_line_comparison,
     plot_energy_density,
     plot_energy_distribution_histogram,
@@ -39,7 +39,7 @@ from protqc.plots import (
     plot_directional_excitation_information_heatmap,
     plot_stability_vs_sensitivity_quadrants,
 )
-from protqc.structure_viz import get_structure_image, render_structure_pymol
+from qprotsim.structure_viz import get_structure_image, render_structure_pymol
 
 
 @dataclass
@@ -116,7 +116,7 @@ def _resolve_output_paths(
     Priority order:
     1. Function parameter (output_dir) - highest priority
     2. Config file value (config_output_dir)
-    3. Default location (config_path.parent / "protqc_outputs")
+    3. Default location (config_path.parent / "qprotsim_outputs")
     
     Report file is ALWAYS placed at the root of the output directory.
     Report filename priority:
@@ -130,7 +130,7 @@ def _resolve_output_paths(
     elif config_output_dir is not None:
         out_dir = config_output_dir
     else:
-        out_dir = config_path.parent / "protqc_outputs"
+        out_dir = config_path.parent / "qprotsim_outputs"
     
     if report_filename is not None:
         rpt_filename = report_filename
@@ -186,7 +186,7 @@ def _config_from_data(data: dict) -> tuple[Config, str, Optional[str], int, Opti
             )
     elif "pdb_code" in data:
         # User provided a PDB code - download if needed
-        from protqc.helper import fetch_pdb
+        from qprotsim.helper import fetch_pdb
         pdb_code = str(data["pdb_code"])
         output_dir = data.get("download_dir", None)
         
@@ -582,7 +582,7 @@ def generate_report(
     )
     story: list = []
 
-    story.append(Paragraph(f"{molecule_name} protqc report", title_style))
+    story.append(Paragraph(f"{molecule_name} qprotsim report", title_style))
     story.append(Spacer(1, 0.12 * inch))
     table_index = 1
     section_index = 1
@@ -917,7 +917,7 @@ def run_batch_analysis_from_yaml(
     print(f"{'='*70}\n")
     
     # Download all PDB files first (if using PDB codes)
-    from protqc.helper import batch_fetch_pdb
+    from qprotsim.helper import batch_fetch_pdb
     
     download_dir = config.get("download_dir", None)
     force_download = config.get("force_download", False)
@@ -951,7 +951,7 @@ def run_batch_analysis_from_yaml(
     elif "output_dir" in config:
         base_output_dir = Path(config["output_dir"])
     else:
-        base_output_dir = config_path.parent / "protqc_batch_outputs"
+        base_output_dir = config_path.parent / "qprotsim_batch_outputs"
     
     # Get report filename pattern from config (supports {molecule_name} and {pdb_code})
     report_filename_pattern = config.get("report_file_name", "{pdb_code}_report.pdf")
@@ -1020,7 +1020,7 @@ def run_batch_analysis_from_yaml(
             
             gpu_mem_before = None
             try:
-                from protqc.helper import HAVE_CUPY
+                from qprotsim.helper import HAVE_CUPY
                 if HAVE_CUPY:
                     import cupy as cp
                     mempool = cp.get_default_memory_pool()

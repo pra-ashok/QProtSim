@@ -18,7 +18,7 @@ import numpy as np
 import pennylane as qml
 from MDAnalysis.lib.distances import distance_array
 
-from protqc.info_theory import debug_mode
+from qprotsim.info_theory import debug_mode
 
 @dataclass
 class Config:
