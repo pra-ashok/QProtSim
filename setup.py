@@ -2,14 +2,14 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='protqc',
-    version='0.5.0',
+    name='qprotsim',
+    version='0.6.0',
     author='Pratik Patil, Bhushan Bonde',
     author_email='p.patil@uos.ac.uk, b.bonde@uos.ac.uk',
     description='A package for thermodynamic modeling of proteins with Quantum computers',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
-    url='https://github.com/pratikp204/protqc',
+    url='https://github.com/pra-ashok/QProtSim',
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
     include_package_data=True,
