@@ -148,34 +148,37 @@ report_file_name: trp_cage_report.pdf
 
 ## Command-Line Usage
 
-Show top-level help:
+Show top-level help: QProtSim with alises as qprotsim, QPS, qps works to access package.
 
 ```bash
-QProtSim --help
+QProtSim --help 
+qprotsim --help
+QPS --help
+qps --help
 ```
 
 Run a single analysis:
 
 ```bash
-QProtSim analyze -c config.yaml
+qps analyze -c config.yaml
 ```
 
 Override the output directory:
 
 ```bash
-QProtSim analyze -c config.yaml --output-dir results/trp_cage
+qps analyze -c config.yaml --output-dir results/trp_cage
 ```
 
 Override the report path:
 
 ```bash
-QProtSim analyze -c config.yaml --report results/trp_cage/report.pdf
+qps analyze -c config.yaml --report results/trp_cage/report.pdf
 ```
 
 Enable verbose debug output from the information-theory and circuit routines:
 
 ```bash
-QProtSim analyze -c config.yaml --debug
+qps analyze -c config.yaml --debug
 ```
 
 Accepted aliases for `analyze` are `analyse`, `analysis`, and
@@ -187,7 +190,7 @@ The CLI includes a preprocessing entry point for extracting molecular graph
 features from a PDB file:
 
 ```bash
-QProtSim preprocess \
+qps preprocess \
   --pdb input.pdb \
   --selection protein \
   --chain A \
@@ -202,7 +205,7 @@ The full report-producing workflow is `QProtSim analyze`.
 Run basin analysis from sampled states and optional reference energy arrays:
 
 ```bash
-QProtSim basin \
+qps basin \
   --z_samples outputs/trp_cage_z_samples.csv \
   --basins -60 -40 -40 -20 \
   --out basin_results.csv
@@ -264,7 +267,7 @@ report_file_name: "{pdb_code}_report.pdf"
 Run:
 
 ```bash
-QProtSim analyze -c batch_config.yaml
+qps analyze -c batch_config.yaml
 ```
 
 Each protein is written to its own subdirectory under `output_dir`, for example

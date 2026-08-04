@@ -146,4 +146,5 @@ cython_debug/
 !README.md
 *.md
 input/qprotsim_*
-output/
+outputs/*
+
