@@ -47,7 +47,8 @@ setup(
         'pillow',   
         'pymol-open-source',  # Molecular visualization for structure rendering
         'psutil',
-        'pennylane-qiskit'
+        'pennylane-qiskit',
+        'gast>=0.7.0', ## Pennylane dependency gast needed 
     ],
     extras_require={
         "dev": [
@@ -88,6 +89,9 @@ setup(
     entry_points={
         'console_scripts': [
             'qprotsim=qprotsim.__main__:main',
+            "QProtSim=qprotsim.__main__:main",
+            "QPS=qprotsim.__main__:main",
+            "qps=qprotsim.__main__:main",
         ],
     },
 )

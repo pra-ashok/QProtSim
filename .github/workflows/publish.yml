@@ -3,7 +3,8 @@ name: Publish to PyPI
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"   # triggers on v1.2.3, v0.6.0, etc.
+      - "v*"   # tag filtering uses glob, not regex
+  workflow_dispatch:
 
 jobs:
   build-and-publish:
@@ -14,7 +15,7 @@ jobs:
       url: https://pypi.org/p/qprotsim
 
     permissions:
-      id-token: write  # required for trusted publishing (OIDC)
+      id-token: write  # harmless with token auth; useful if migrating to trusted publishing
 
     steps:
       - name: Checkout repository
@@ -31,12 +32,20 @@ jobs:
       - name: Verify version matches tag
         run: |
           PKG_VERSION=$(python -c "import re; v=re.search(r\"__version__ = ['\\\"]([^'\\\"]+)['\\\"]\", open('src/qprotsim/__init__.py').read()).group(1); print(v)")
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
-            echo "ERROR: __version__ ($PKG_VERSION) does not match tag ($TAG_VERSION)"
-            exit 1
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "ERROR: Tag ${GITHUB_REF_NAME} is not semver (expected vX.Y.Z)"
+              exit 1
+            fi
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+            if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+              echo "ERROR: __version__ ($PKG_VERSION) does not match tag ($TAG_VERSION)"
+              exit 1
+            fi
+            echo "Version check passed: $PKG_VERSION"
+          else
+            echo "Manual workflow run detected (non-tag ref). Package version is $PKG_VERSION"
           fi
-          echo "Version check passed: $PKG_VERSION"
 
       - name: Build sdist and wheel
         run: python -m build
@@ -47,4 +56,5 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
