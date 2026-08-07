@@ -24,6 +24,8 @@ classifiers = [
 ]
 
 license = "MIT"
+
+[tool.setuptools]
 license-files = ["LICENSE"]
 
 [tool.setuptools.dynamic]
