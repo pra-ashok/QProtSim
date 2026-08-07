@@ -15,7 +15,8 @@ jobs:
       url: https://pypi.org/p/qprotsim
 
     permissions:
-      id-token: write  # harmless with token auth; useful if migrating to trusted publishing
+      id-token: write  # needed for trusted publishing / OIDC
+      contents: read   # needed for actions/checkout to clone the repository
 
     steps:
       - name: Checkout repository
