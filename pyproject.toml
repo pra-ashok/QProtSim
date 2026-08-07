@@ -4,6 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "qprotsim"
+dynamic = ["version"]
 
 authors = [
   { name="Dr Bhushan Bonde", email="b.bonde@uos.ac.uk" },
@@ -24,6 +25,9 @@ classifiers = [
 
 license = "MIT"
 license-files = ["LICENSE"]
+
+[tool.setuptools.dynamic]
+version = {attr = "qprotsim.__version__"}
 
 [project.urls]
 Homepage = "https://github.com/pra-ashok/QProtSim"
