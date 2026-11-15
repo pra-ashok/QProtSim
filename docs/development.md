@@ -37,6 +37,16 @@ The generated site is written to `site/`, which is ignored by Git. `make docs` p
 
 Shadcn keeps the documentation sections visible in the left sidebar on desktop and provides a menu on smaller screens. Search, light and dark themes, code copying, and a page contents panel are supplied by the theme. KaTeX, Geist fonts, and syntax styles are included in the generated site. Math options belong to `theme.katex_options` in `mkdocs.yml`.
 
+## Publish with GitHub Pages
+
+The `Documentation` workflow in `.github/workflows/docs.yml` builds the site for documentation pull requests and deploys successful documentation changes pushed to `main`. It also supports manual runs through **Actions → Documentation → Run workflow**. Deployment runs from `main`.
+
+In the repository's **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source. This enables the artifact deployment used by the workflow. [GitHub Pages workflow setup](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)
+
+The default site address is `https://pra-ashok.github.io/QProtSim/`. Deployment reads the actual Pages address from GitHub and passes it through `DOCS_SITE_URL`, which also supports a configured custom domain.
+
+The build installs the `docs` dependencies declared in `pyproject.toml`, including the Shadcn theme. It runs `python -m mkdocs build --strict` and uploads `site/` as a Pages artifact. The deployment job uses the `github-pages` environment and GitHub's workflow token.
+
 ## Review against the implementation
 
 Regenerate the scientific figures with NumPy and Matplotlib installed. Optional raster previews support visual review while the documentation uses the vector assets.

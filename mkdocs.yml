@@ -1,4 +1,5 @@
 site_name: QProtSim
+site_url: !ENV [DOCS_SITE_URL, "https://pra-ashok.github.io/QProtSim/"]
 site_description: Residue-level protein modelling with quantum circuits and information theory
 repo_url: https://github.com/pra-ashok/QProtSim
 repo_name: pra-ashok/QProtSim
