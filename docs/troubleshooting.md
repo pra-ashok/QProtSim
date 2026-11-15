@@ -1,50 +1,103 @@
 # Troubleshooting
 
-## Installation cannot find a compatible wheel
+Find the symptom below and try the suggested checks. For a first run, use the small CPU example in [First analysis](getting-started.md).
 
-Use Python 3.11 or later with a recent pip. Binary availability varies across platforms and GPU plugins. A Python 3.11 or 3.12 environment is a practical choice when an upstream package has limited wheels.
+## Installation fails
+
+Check that Python is version 3.11 or later, activate your environment, and update the installer before trying again from the QProtSim folder:
 
 ```bash
+python --version
 python -m pip install --upgrade pip setuptools wheel
 python -m pip install ".[cpu]"
 ```
 
-FreeSASA may build from source and requires a C compiler and Python development headers. Follow its upstream installation instructions for your operating system. [FreeSASA Python installation](https://freesasa.github.io/python/intro.html#installation)
+A “no matching distribution” error can mean that a dependency has no compatible package for your Python version or operating system. Check the package named in the error. CPU and GPU packages can have different platform requirements.
 
-## The requested accelerator is unavailable
+FreeSASA may need a C compiler and Python development headers if a ready-made package is unavailable. Follow the [FreeSASA installation instructions](https://freesasa.github.io/python/intro.html#installation) for your platform.
 
-Install the matching extra and check device construction and execution directly using the test in the [installation guide](installation.md#verify-the-backend). Device creation in QProtSim can silently fall back to `default.qubit`. A `lightning.gpu` execution error containing GPU-related terms triggers an additional CPU retry. The report records the requested device name, so independently verify the backend before benchmarking.
+## The qprotsim command is not found
 
-For CPU execution, set the device explicitly.
+Activate the same environment you used for installation, then try:
+
+```bash
+python -m qprotsim --help
+```
+
+If Python also cannot find `qprotsim`, install it in that environment using the [installation guide](installation.md#cpu).
+
+## The PDB file cannot be found or downloaded
+
+For a local file, check that `pdb_path` points to an existing `.pdb` file. Relative paths start from the folder where you run the command. For example:
+
+```yaml
+pdb_path: ./input/your_protein.pdb
+```
+
+For a download, check the four-character PDB identifier, internet connection, and permission to write to `download_dir`. You can use a previously downloaded file with `pdb_path` instead.
+
+## No residues match the selection
+
+Check the chain identifier in your structure. To include all chains, use:
+
+```yaml
+chain: null
+```
+
+Keep `protein_only: true` for ordinary protein analysis. Modified or nonstandard residues may lack the reference values needed by the model. Including them with `protein_only: false` does not add those missing values.
+
+## The analysis is slow or runs out of memory
+
+Start with a smaller protein or select a smaller chain. Each selected residue adds a qubit, and the memory used by a dense circuit simulator roughly doubles with each additional qubit. See [memory planning](getting-started.md#go-further) for example sizes.
+
+Reducing `shots` lowers sample storage and some analysis work. It does not reduce the size of the simulated quantum state. Selecting a GPU also requires enough memory on that GPU.
+
+## The requested GPU is unavailable
+
+Install the package matching your GPU and check its hardware and driver requirements in the [installation guide](installation.md#optional-gpu-execution). Run the [backend check](installation.md#verify-the-backend) before a large analysis.
+
+QProtSim can continue on the CPU when the requested backend is unavailable. The device name in the report describes the requested setting, so verify GPU execution separately before comparing performance.
+
+To run explicitly on the CPU, use:
 
 ```yaml
 pl_device: default.qubit
 ```
 
-## No residues match the selection
+## Some structure pictures are missing
 
-Check the PDB chain identifier and use standard amino-acid residues with `protein_only: true`. For all chains, set `chain: null`. Multi-chain structures and sequence gaps require careful review of the coupling model's adjacency assumptions.
+Structure pictures can depend on internet access or the optional PyMOL package. Check whether the PDF and numerical tables were still produced. A missing picture can occur even when the numerical analysis succeeds.
 
-Nonstandard residues can lack entries in the energy, hydrophobicity, or maximum-SASA tables. `protein_only: false` retains additional residues during selection, and those residues can raise a lookup error downstream.
+To enable PyMOL where a compatible distribution is available, follow [Optional structure pictures](installation.md#optional-structure-pictures).
 
-## PDB download or structure images fail
+## A score is NaN or changes between runs
 
-Check the four-character identifier, network connectivity, and download-directory permissions. Use `pdb_path` to analyse a cached local structure. Download validation compares remote checksum metadata when available and also checks basic file integrity.
+`NaN` means that a numerical value is undefined. A residue-sensitivity score can be undefined when a residue appears in only one state, or when there is no total divergence to normalise.
 
-Structure images use RCSB downloads, optional PyMOL, and a Matplotlib fallback. Missing PyMOL can produce a warning while analysis continues. Install `.[visualization]` when a compatible PyMOL distribution is available.
+Inspect the sampled-state table to see whether both states were observed. More `shots` may help with rare states, but cannot ensure that a state with zero model probability will appear. Do not interpret an undefined score as zero sensitivity.
 
-## Information metrics contain NaN values
+Small changes between runs are expected because the model is sampled randomly. Compare repeated runs before treating a small difference as meaningful. The [results guide](outputs.md) and [science guide](theory.md) explain the measures and their limitations.
 
-The residue-information estimator can encounter empty conditional histograms when a residue is observed in only one state. Column normalization can also divide by zero when all divergences vanish. Inspect state counts and repeat the analysis with an appropriate shot count. Finite sampling can leave very rare states unobserved.
-
-The information functions infer ±1 encoding from the presence of a negative value. An all-`+1` array is ambiguous and can be interpreted as binary excited states. Convert known Pauli-Z samples explicitly before direct information-function calls.
+If you use the Python information functions with your own arrays, check the state encoding. For exported Pauli-Z samples, `+1` means ground and `-1` means excited. Convert them explicitly to binary excitation states when the function accepts binary input:
 
 ```python
-states = (z_samples == -1).astype(int)
+binary_excited = (z_samples == -1).astype(int)
 ```
 
-See the [API reference](api.md) for each function's accepted encoding and the [scientific model](theory.md) for the estimators.
+This avoids ambiguity when every sampled value is `+1`. See the [Python guide](api.md) for each function's input convention.
 
-## Basin command rejects exported samples
+## Earlier results have changed or disappeared
 
-The `basin` command expects a CSV whose first column is named `shot`, followed by residue columns containing ±1 states. The report's `<molecule>_z_samples.csv` uses this format. Custom `--E0` and `--E1` inputs are NumPy `.npy` arrays and must be supplied together in the same residue order.
+QProtSim reuses filenames within an output folder. Save each analysis in a different folder, for example:
+
+```bash
+qprotsim analyze -c config.yaml --output-dir ./outputs/repeat
+```
+
+Keep the input structure and configuration with the results so that you can repeat the analysis later.
+
+## The basin command rejects a sample file
+
+Basin analysis groups sampled configurations into energy ranges. Its `--z_samples` input must be a CSV with a leading `shot` column and residue columns containing `+1` or `-1`. Use the exported `<molecule>_z_samples.csv` file as the starting point.
+
+If you supply custom reference energies, provide both `--E0` and `--E1` as NumPy `.npy` arrays in the same residue order as the sample columns.

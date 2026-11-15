@@ -1,80 +1,90 @@
 # Installation
 
-## Choose an environment
+Start with the CPU installation below. It runs on your computer's processor and does not require a quantum computer or a graphics card. GPU options are available for users with compatible hardware.
 
-QProtSim requires Python 3.11 or later. The examples below install the checked-out source tree from the repository root. Use a virtual environment and a recent pip.
+## Get QProtSim
+
+You need **Python 3.11 or later** and a copy of the [QProtSim repository](https://github.com/pra-ashok/QProtSim). Download and extract the repository ZIP, then open a terminal in the extracted folder. If you use Git, you can get the same files with:
 
 ```bash
-python3.11 -m venv .venv
-source .venv/bin/activate
+git clone https://github.com/pra-ashok/QProtSim.git
+cd QProtSim
+```
+
+The commands on this page run from that folder. Check your Python version:
+
+```bash
+python --version
+```
+
+On systems where the command is `python3`, use `python3` to create the environment in the next step.
+
+## Create an environment
+
+A virtual environment keeps QProtSim's packages separate from your other Python tools.
+
+```bash
+python -m venv .venv
+```
+
+Activate it using the command for your terminal:
+
+| Terminal | Activation command |
+| --- | --- |
+| Linux or macOS | `source .venv/bin/activate` |
+| Windows PowerShell | `.venv\Scripts\Activate.ps1` |
+| Windows Command Prompt | `.venv\Scripts\activate.bat` |
+
+Then update the package installer:
+
+```bash
 python -m pip install --upgrade pip
 ```
 
-On Windows, activate the environment with `.venv\Scripts\activate`. Accelerator wheels have additional platform requirements described below.
-
-FreeSASA and other scientific dependencies contain compiled components. If a wheel is unavailable, install your platform's compiler and Python development headers before building from source. [FreeSASA installation](https://freesasa.github.io/python/intro.html#introduction)
-
-| Extra | PennyLane device | Intended execution |
-| --- | --- | --- |
-| `cpu` | `default.qubit` or `lightning.qubit` | CPU |
-| `cuda` | `lightning.gpu` | Supported NVIDIA GPU on Linux |
-| `rocm` | `lightning.amdgpu` | Supported AMD GPU with ROCm |
-
-Installing an extra makes its backend available. Select the desired device through YAML `pl_device` or `Config(pl_device=...)`. The default is `default.qubit`. PennyLane and the Lightning plugins are kept at version 0.44.0 to align their interfaces.
+Activate this environment again whenever you open a new terminal to use QProtSim.
 
 ## CPU
 
+Install QProtSim and its CPU simulator:
+
 ```bash
 python -m pip install ".[cpu]"
+qprotsim --help
 ```
 
-The base installation, `python -m pip install .`, also supports CPU execution. The explicit `cpu` extra provides a consistent installation command for backend selection.
+The dot in `.[cpu]` means “install from this folder.” If the help text appears, continue to [your first analysis](getting-started.md).
+
+Use this setting in your analysis configuration:
 
 ```yaml
 pl_device: default.qubit
 ```
 
-For the compiled Lightning CPU simulator, select `lightning.qubit`.
+`pl_device` names the simulator that runs the quantum circuit. The CPU installation also includes `lightning.qubit`, an alternative CPU simulator. You can select it by changing that value.
 
-```yaml
-pl_device: lightning.qubit
-```
+If installation reports a missing compiler or a failed FreeSASA build, see [installation troubleshooting](troubleshooting.md#installation-fails). FreeSASA is the tool QProtSim uses to estimate how much of each residue is exposed to solvent.
 
-## NVIDIA CUDA
+## Optional GPU execution
 
-```bash
-python -m pip install ".[cuda]"
-```
+A GPU is a graphics processor that can also run numerical calculations. Choose the option matching your hardware and system software:
 
-```yaml
-pl_device: lightning.gpu
-```
+| Hardware | Install from the QProtSim folder | Configuration setting |
+| --- | --- | --- |
+| Supported NVIDIA GPU with CUDA | `python -m pip install ".[cuda]"` | `pl_device: lightning.gpu` |
+| Supported AMD GPU with ROCm | `python -m pip install ".[rocm]"` | `pl_device: lightning.amdgpu` |
 
-This installs `pennylane-lightning-gpu==0.44.0`. Its wheel dependencies supply cuStateVec and CUDA 12 user-space libraries. A compatible NVIDIA driver and supported GPU are required separately. The pinned release requires compute capability SM 7.0 or later. Follow the upstream release's platform and driver requirements. [Lightning-GPU 0.44 device requirements](https://github.com/PennyLaneAI/pennylane-lightning/blob/v0.44.0/doc/lightning_gpu/device.rst)
+These packages use PennyLane Lightning 0.44.0. Installing a GPU package does not install your graphics driver or make every GPU compatible. Check the requirements for your chosen simulator before installing: [NVIDIA requirements](https://github.com/PennyLaneAI/pennylane-lightning/blob/v0.44.0/doc/lightning_gpu/device.rst) · [AMD requirements](https://github.com/PennyLaneAI/pennylane-lightning/blob/v0.44.0/doc/lightning_amdgpu/device.rst).
 
-CuPy is optional in QProtSim. The quantum simulator uses the Lightning plugin, and the helper module supports NumPy when CuPy is absent. Installing CuPy separately requires a build matching your CUDA environment.
+### Verify the backend
 
-## AMD ROCm
+A backend is the simulator used to execute the circuit. QProtSim can continue on the CPU when a requested backend is unavailable. The report lists the requested backend, so that label alone does not confirm GPU execution.
 
-```bash
-python -m pip install ".[rocm]"
-```
-
-```yaml
-pl_device: lightning.amdgpu
-```
-
-This installs `pennylane-lightning-amdgpu==0.44.0`. Upstream prebuilt wheels target Linux x86_64, AMD MI300-series GPUs, and ROCm 7.0 or later. Other AMD architectures or ROCm versions require a matching Lightning source build with HIP and the appropriate Kokkos architecture flags. The extra installs the Python backend, while the system ROCm stack must be available. [Lightning-AMDGPU 0.44 device requirements](https://github.com/PennyLaneAI/pennylane-lightning/blob/v0.44.0/doc/lightning_amdgpu/device.rst) · [Source-build instructions](https://github.com/PennyLaneAI/pennylane-lightning/blob/v0.44.0/doc/lightning_amdgpu/installation.rst)
-
-## Verify the backend
-
-Execute a small circuit directly before running a large analysis. Set `backend` to the device you intend to use. This call reaches PennyLane directly and reports backend errors.
+Before measuring GPU performance, run this small check in Python. Replace `lightning.qubit` with your chosen device name. A successful run prints the device name and a sample shape of `(100, 2)`.
 
 ```python
 import pennylane as qml
 
-backend = "lightning.qubit"
-device = qml.device(backend, wires=2)
+device = qml.device("lightning.qubit", wires=2)
 
 @qml.set_shots(100)
 @qml.qnode(device)
@@ -84,20 +94,17 @@ def check_backend():
     return qml.sample(wires=[0, 1])
 
 samples = check_backend()
-assert samples.shape == (100, 2)
-print(device.name)
+print(device.name, samples.shape)
 ```
 
-QProtSim's device factory falls back to `default.qubit` when a requested device fails to initialize. Its CUDA execution path can also retry on CPU after GPU-related errors. The report records the requested device, so the direct check above helps verify accelerator availability.
+If this check fails, resolve the backend error or use `default.qubit` for CPU execution.
 
-## Optional tools
+## Optional structure pictures
+
+QProtSim can include pictures of the protein in its report. To enable PyMOL rendering where a compatible package is available, install:
 
 ```bash
-python -m pip install -e ".[cpu,docs]"
-python -m pip install -e ".[cpu,dev]"
 python -m pip install ".[visualization]"
 ```
 
-The `docs` extra installs MkDocs, the Shadcn theme, PyMdown Extensions, and Pygments. The `dev` extra includes the documentation tools and development dependencies. The `visualization` extra requests PyMOL for local structure rendering when a compatible distribution is available. The report workflow can also use RCSB images and Matplotlib rendering.
-
-Continue with a [first analysis](getting-started.md) or [build the documentation](development.md).
+PyMOL is optional. Other image sources and simpler structure drawings are available when it is absent.

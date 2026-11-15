@@ -88,6 +88,27 @@ header {
   letter-spacing: -0.04em;
 }
 
+.qps-brand {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  min-width: 0;
+  padding-inline: 0.4rem;
+}
+
+.qps-brand-logo {
+  display: block;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  object-fit: contain;
+}
+
+.dark .qps-brand-logo {
+  border-radius: 0.3rem;
+  background: #fcfcfa;
+}
+
 [data-slot="sidebar-group"] {
   padding: 0.35rem 0 0.65rem;
 }
@@ -310,6 +331,33 @@ article:has(.hero) #page-header {
   margin: 0;
 }
 
+.typography figure.qps-cover {
+  overflow: hidden;
+  padding: 0;
+  border-color: var(--border);
+  border-radius: 0.8rem;
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: var(--qps-shadow);
+}
+
+.typography .qps-cover-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.typography .qps-cover > p {
+  margin: 0;
+}
+
+.typography .qps-cover figcaption {
+  margin: 0;
+  padding: 0.8rem 1.1rem;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+}
+
 .typography figure a:not(.button):not(.headerlink) {
   color: #087582;
 }
@@ -414,6 +462,32 @@ article:has(.hero) #page-header {
 }
 
 @media (max-width: 40rem) {
+  header .container-wrapper {
+    padding-inline: 1rem;
+  }
+
+  header .ml-auto {
+    gap: 0.25rem;
+  }
+
+  #burger-button > span {
+    display: none;
+  }
+
+  .qps-brand {
+    gap: 0.4rem;
+    padding-inline: 0.2rem;
+  }
+
+  .qps-brand-logo {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .qps-site-name {
+    font-size: 1rem;
+  }
+
   .typography .grid.cards > ul {
     grid-template-columns: minmax(0, 1fr);
   }

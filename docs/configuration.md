@@ -1,13 +1,19 @@
 # Configuration
 
-The `qprotsim analyze` command reads a YAML mapping. Single analyses require `molecule_name` and either `pdb_path` or `pdb_code`.
+A configuration file tells QProtSim which structure to analyse, how many samples to take, and where to save the results. Save it as a plain-text `.yaml` file, then run:
+
+```bash
+qprotsim analyze --config config.yaml
+```
+
+If you are new to QProtSim, start with the complete example in [your first analysis](getting-started.md).
 
 ## A single protein
 
 ```yaml
 pdb_code: 1L2Y
 molecule_name: Trp Cage
-download_dir: ./input
+download_dir: ./pdb_cache
 chain: A
 protein_only: true
 shots: 10000
@@ -17,60 +23,89 @@ output_dir: ./outputs/trp_cage
 report_file_name: report.pdf
 ```
 
-```bash
-qprotsim analyze -c config.yaml
+You must provide a `molecule_name` and either a `pdb_code` to download or a `pdb_path` pointing to an existing file. To use a local file, replace `pdb_code` and `download_dir` with:
+
+```yaml
+pdb_path: ./input/your_protein.pdb
 ```
 
-To use a local structure, replace `pdb_code` and the download settings with `pdb_path: ./input/1L2Y.pdb`. If both input keys appear, `pdb_path` takes precedence.
+If both input settings are present, QProtSim uses `pdb_path`.
 
-| Key | Default | Meaning |
+### Structure and sampling
+
+Defaults apply when a setting is omitted. The first-run example uses fewer samples and plot bins than the defaults to keep the initial analysis manageable.
+
+| Setting | Default | Meaning |
 | --- | --- | --- |
-| `pdb_path` | Required unless `pdb_code` is supplied | Local PDB file. |
-| `pdb_code` | Required unless `pdb_path` is supplied | Four-character RCSB identifier to download. |
-| `molecule_name` | Required | Report title and CSV filename prefix. |
-| `chain` | `null` for a single run | Chain ID. `null`, an empty string, or `"--"` selects all chains. |
-| `protein_only` | `true` | Select protein residues recognized by the package. |
-| `shots` | `100000` | Number of sampled circuit configurations. |
-| `pl_device` | `default.qubit` | PennyLane device name. See [installation](installation.md). |
-| `bins` | `1000` | Number of bins for energy plots. |
-| `output_dir` | `<config_dir>/qprotsim_outputs` | Destination for figures, CSV files, and the PDF. |
-| `report_file_name` | `report.pdf` | PDF filename inside the output directory. |
-| `download_dir` | Current working directory | Cache for downloaded PDB files. |
-| `force_download` | `false` | Fetch a fresh PDB file even if a cached file exists. |
-| `verify_checksum` | `true` | Check file integrity when checksum metadata is available. |
+| `pdb_path` | No default | Path to a local PDB structure file; required unless you supply `pdb_code`. |
+| `pdb_code` | No default | Four-character Protein Data Bank identifier; required unless you supply `pdb_path`. |
+| `molecule_name` | Required | Name used in the report and output filenames. Use a simple, descriptive name. |
+| `chain` | All chains for a single analysis | Chain identifier such as `A`. Use `null` for all chains. An empty string or `"--"` also selects all chains. |
+| `protein_only` | `true` | Restricts the analysis to recognised protein residues. Keep this enabled for ordinary use. |
+| `shots` | `100000` | Number of samples drawn from the circuit. More samples improve precision but need more time and storage. |
+| `pl_device` | `default.qubit` | Simulator used to run the circuit. See [installation](installation.md). |
+| `bins` | `1000` | Number of intervals in the energy plots. This does not change the binning used for residue-sensitivity scores. |
 
-Use YAML booleans `true` and `false` without quotes. Choose positive integer values for `shots` and `bins`. Residues must have reference energies supported by the package. Setting `protein_only: false` includes additional residues in selection, which can fail SASA normalization or reference-energy lookup.
+Use positive whole numbers for `shots` and `bins`. Write `true` and `false` without quotation marks. A setting such as `protein_only: "false"` is text rather than a YAML boolean and can give unexpected results.
 
-### Paths and overrides
+Set `chain` explicitly when comparing analyses. Selecting all chains can greatly increase memory use. Setting `protein_only: false` may include residues for which the model has no reference values, causing an error.
 
-Explicit relative paths in the YAML are interpreted from the shell's current working directory. The default output path is constructed from the configuration file's parent directory.
+### Output files
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `output_dir` | `qprotsim_outputs` beside the configuration file | Folder for the PDF, tables, and figures. |
+| `report_file_name` | `report.pdf` | PDF filename inside that folder. Use a filename such as `trp_cage_report.pdf`, without a folder path. |
+
+Choose a separate output folder for each analysis you want to keep. Reusing a folder can overwrite previous results.
+
+### Downloads
+
+These settings apply when you use `pdb_code`:
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `download_dir` | The folder where you run the command | Folder for downloaded PDB files. Existing files can be reused. |
+| `force_download` | `false` | Download the structure again even when a saved copy exists. |
+| `verify_checksum` | `true` | Check downloaded file integrity using remote checksum information when available. |
+
+### Paths and command-line overrides
+
+An explicit relative path, such as `./input/protein.pdb`, starts from the folder where you run the command. It does not start from the configuration file's folder. If you omit `output_dir`, the default output folder is placed beside the configuration file.
+
+You can change the output location without editing the YAML:
 
 ```bash
-qprotsim analyze -c config.yaml --output-dir results/trp_cage
-qprotsim analyze -c config.yaml --report results/trp_cage/custom_report.pdf
+qprotsim analyze -c config.yaml --output-dir ./results/trp_cage
 ```
 
-`--output-dir` overrides the YAML output directory. `--report` supplies the report filename and, when `--output-dir` is absent, its parent becomes the output directory. If both options are supplied, the report basename is written into `--output-dir`.
+To choose a PDF path for a single analysis:
 
-The Python wrapper follows the same priority for its `output_dir` and `report_filename` arguments. Use a basename such as `report.pdf` for `report_file_name` and `report_filename`.
+```bash
+qprotsim analyze -c config.yaml --report ./results/trp_cage/custom_report.pdf
+```
 
-### Advanced numerical settings
+`--output-dir` takes priority over the YAML output directory. If you supply `--report` alone, its parent folder becomes the output directory when the path includes a folder. If you supply both options, the PDF is placed in `--output-dir` using the filename from `--report`.
 
-The YAML reader passes `pdb_path`, `protein_only`, `shots`, and `pl_device` to `Config`. It reads chain, plot bins, download settings, and output settings separately. Additional keys such as `temperature`, `beta`, `gamma`, `phi_cap`, or `weights` have no effect in this workflow.
+### Supported settings
 
-The Python functions `compute_directed_transfer_schedule`, `prepare_state_propensity`, and `build_Kij_pairs` expose the corresponding lower-level controls. The high-level report uses their defaults. The `bins` setting reaches the energy plots. `run_analysis` calls `residue_information_gain` with that function's own default of 10,000 bins.
+Use the settings listed on this page. Adding keys such as `temperature`, `beta`, `gamma`, or `weights` does not change the standard YAML analysis. The [science guide](theory.md) explains the model's fixed assumptions, and the [Python guide](api.md) covers direct numerical work.
 
-## A batch of PDB entries
+## Several proteins in one run
+
+Batch mode downloads and analyses a list of PDB entries using shared settings. Start with small proteins; a batch does not reduce the memory needed for each individual analysis.
+
+Save this example as `batch.yaml`:
 
 ```yaml
 batch_mode: true
 pdb_codes:
   - 1L2Y
-  - 1UBQ
+  - 1UAO
 molecule_names:
   1L2Y: Trp Cage
-  1UBQ: Ubiquitin
-download_dir: ./input
+  1UAO: Chignolin
+download_dir: ./pdb_cache
 chain: A
 protein_only: true
 shots: 10000
@@ -80,25 +115,25 @@ output_dir: ./outputs/batch
 report_file_name: "{pdb_code}_report.pdf"
 ```
 
+Run it with:
+
 ```bash
 qprotsim analyze -c batch.yaml
 ```
 
-Batch mode accepts a `pdb_codes` list. After every download succeeds, each entry receives a separate analysis using the shared settings. `molecule_names` optionally maps the uppercase PDB codes returned by the downloader to display names.
+Each protein gets a separate output folder, such as `outputs/batch/1l2y/1l2y_report.pdf`.
 
-| Batch key | Default | Meaning |
+| Batch setting | Default | Meaning |
 | --- | --- | --- |
-| `batch_mode` | `false` | Enable the batch dispatcher. |
-| `pdb_codes` | Required in batch mode | PDB identifiers to download and analyze. |
-| `molecule_names` | PDB code as display name | Optional mapping from PDB code to display name. |
-| `chain` | `A` | Shared chain selection. Use `null` for all chains. |
-| `output_dir` | `<config_dir>/qprotsim_batch_outputs` | Base output directory. |
-| `report_file_name` | `{pdb_code}_report.pdf` | Report filename pattern. |
+| `batch_mode` | `false` | Set to `true` to analyse a list of entries. |
+| `pdb_codes` | Required for a batch | List of PDB identifiers to download. |
+| `molecule_names` | PDB code used as the name | Optional display names, keyed by uppercase PDB code. |
+| `chain` | `A` | Shared chain selection. Use `null` for all chains. This default differs from a single analysis. |
+| `output_dir` | `qprotsim_batch_outputs` beside the configuration file | Parent folder for the individual result folders. |
+| `report_file_name` | `"{pdb_code}_report.pdf"` | Filename pattern used for each report. |
 
-Shared `protein_only`, `shots`, `pl_device`, `bins`, and download settings use the single-run defaults above. Batch mode creates lowercase PDB subdirectories, such as `outputs/batch/1l2y/1l2y_report.pdf`. The placeholders `{pdb_code}` and `{molecule_name}` are lowercased, and spaces in the molecule name become underscores.
+The filename pattern accepts `{pdb_code}` and `{molecule_name}`. Both substitutions use lowercase text; spaces in molecule names become underscores. Other shared settings use the single-analysis defaults above.
 
-Use `--output-dir` to override the batch output base directory. Batch report filenames come from `report_file_name`. The CLI's `--report` option applies to single analyses. A list of local-file configuration objects is currently unsupported by the batch dispatcher.
+Use `--output-dir` to change the parent output folder. For batch reports, set the filename pattern in YAML; `--report` applies only to a single analysis. Batch mode accepts PDB codes rather than a list of local file paths.
 
-The downloader attempts all entries and raises an error if any download failed, stopping the batch before analysis begins. During the analysis stage, an individual protein's failure is printed and processing continues with the next entry. The return mapping contains completed reports. Check the final success count or the dictionary returned by `run_batch_analysis_from_yaml` before treating a batch as complete.
-
-The configuration behavior is implemented in [`report_analysis.py`](https://github.com/pra-ashok/QProtSim/blob/main/src/qprotsim/report_analysis.py) and [`__main__.py`](https://github.com/pra-ashok/QProtSim/blob/main/src/qprotsim/__main__.py).
+All requested downloads must succeed before analysis begins. If one protein fails during analysis, QProtSim continues with the others. Check the final success count and confirm that each expected PDF exists.

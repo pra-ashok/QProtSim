@@ -1,19 +1,26 @@
 site_name: QProtSim
 site_url: !ENV [DOCS_SITE_URL, "https://pra-ashok.github.io/QProtSim/"]
-site_description: Residue-level protein modelling with quantum circuits and information theory
+site_description: Explore protein residue states, energy patterns, and statistical relationships with a quantum-circuit model
 repo_url: https://github.com/pra-ashok/QProtSim
 repo_name: pra-ashok/QProtSim
-edit_uri: edit/main/docs/
+edit_uri: ""
 copyright: >-
   QProtSim · Authors: <a href="https://pra-ashok.github.io/CV/">Pratik Patil</a>,
   <a href="https://scholar.google.com/citations?hl=en&amp;user=O3hkOEUAAAAJ">Bhushan Bonde</a>, and
   <a href="https://scholar.google.com/citations?user=b88L0aEAAAAJ&amp;hl=en">Bhaskar Choubey</a>
   · Software under the MIT License
 strict: true
+exclude_docs: |
+  /development.md
+  /assets/diagrams/*.py
+  **/__pycache__/**
+  **/*.pyc
 
 theme:
   name: shadcn
   custom_dir: overrides
+  icon: assets/branding/qprotsim-logo.png
+  favicon: assets/branding/qprotsim-logo.png
   locale: en
   topbar_sections: false
   show_title: true
@@ -29,6 +36,7 @@ theme:
 nav:
   - Overview: index.md
   - Getting started:
+      - Key concepts: concepts.md
       - Installation: installation.md
       - First analysis: getting-started.md
   - User guide:
@@ -36,11 +44,10 @@ nav:
       - Outputs and interpretation: outputs.md
       - Troubleshooting: troubleshooting.md
   - Science:
-      - Model and equations: theory.md
+      - Scientific model: theory.md
       - Paper and citation: paper.md
-  - Reference:
+  - Advanced use:
       - Python API: api.md
-      - Development: development.md
 
 plugins:
   - shadcn/search

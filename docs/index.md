@@ -5,72 +5,63 @@ sidebar_title: Overview
 
 <div class="hero" markdown>
 
-# Protein ensembles through quantum circuits
+# Explore connections within a protein
 
-QProtSim connects solvent exposure, structural contacts, and a two-state residue model through a PennyLane quantum circuit. Use it to sample residue configurations, examine energy distributions and information-sharing patterns, and generate a PDF report with reusable tables and figures.
+QProtSim uses a simplified quantum-circuit model to explore energy patterns and relationships between amino-acid residues. Start with a protein structure and receive a PDF report, data tables, and figures. You can run the analysis on a CPU without a quantum computer.
 
 [Run your first analysis](getting-started.md){ .button }
-[Read the paper](paper.md){ .button .outline }
+[Learn the key concepts](concepts.md){ .button .outline }
 
 </div>
+
+<figure class="qps-cover" markdown>
+
+[![Conference overview of quantum encoding of proteins, showing Chignolin residue graphs, a quantum circuit, an energy landscape, qubit entanglement, and Trp-cage allostery.](assets/branding/qprotsim-cover.png){ .qps-cover-image width=989 height=551 fetchpriority=high }](assets/branding/qprotsim-cover.png)
+
+<figcaption>Research overview by Pratik Patil et al., presented at the MGMS conference in Oxford, UK, on 29 November 2025. Reproduced unchanged. Select the image to view it at full size.</figcaption>
+</figure>
 
 **Authors:** [Pratik Patil](https://pra-ashok.github.io/CV/) · [Bhushan Bonde](https://scholar.google.com/citations?hl=en&user=O3hkOEUAAAAJ) · [Bhaskar Choubey](https://scholar.google.com/citations?user=b88L0aEAAAAJ&hl=en)
 
-## Start with a structure
+## What does QProtSim do?
 
-```bash
-python -m pip install ".[cpu]"
-qprotsim analyze --config config.yaml
-```
+A residue is an amino acid within a protein chain. QProtSim assigns each selected residue two possible model states, called ground-like and excited solvation states. Solvent exposure and residue chemistry set the starting probabilities. Structural contacts connect residues in the circuit, which is measured repeatedly to produce many combinations of states.
 
-Run these commands from a checkout of the repository. Python imports use the lowercase package name `qprotsim`.
+Those samples help you explore which residue states occur together and which residues are associated with changes in the model's energy distribution. The [key concepts guide](concepts.md) explains the vocabulary with a small example.
 
-<div class="grid cards" markdown>
+## Choose where to begin
 
-- **Run an analysis**
+| Your starting point | Suggested path |
+| --- | --- |
+| **New to the topic** | Read [key concepts](concepts.md), then follow [installation](installation.md) and [your first analysis](getting-started.md). |
+| **Ready to use your own structure** | Follow the [configuration guide](configuration.md) and learn [how to read the outputs](outputs.md). |
+| **Looking for scientific depth** | Explore the [model and equations](theory.md), assumptions, and [research paper](paper.md). |
+| **Working in Python** | Use the [Python API](api.md) to run an analysis and access the samples and tables. |
 
-    Install a backend and analyse a small protein from a local PDB file or an RCSB identifier.
+## From structure to results
 
-    [Installation](installation.md) · [First analysis](getting-started.md)
+1. **Choose a structure.** Supply a local PDB file or a Protein Data Bank identifier and select a chain.
+2. **Run the analysis.** QProtSim measures exposure, builds the residue connections, and samples the circuit.
+3. **Read the report.** Start with energy plots and residue statistics, then explore the information scores.
+4. **Investigate candidates.** Use the findings to plan comparisons or follow-up studies.
 
-- **Understand the model**
+<figure markdown>
 
-    Follow the equations from solvent exposure through coupling and circuit gates to energy and information metrics.
+![Analysis workflow from a protein structure through solvent exposure and residue connections to circuit samples, energies, and information scores.](assets/diagrams/workflow.svg)
 
-    [Theory and diagrams](theory.md)
+<figcaption>The input structure sets the model's exposure and contact information. Circuit samples provide the data used in the report.</figcaption>
 
-- **Use Python directly**
-
-    Work with `run_analysis`, access sampled arrays and matrices, or run the numerical pipeline independently.
-
-    [Python API](api.md)
-
-- **Read the results**
-
-    Identify CSV schemas, state encodings, matrix orientation, and the quantities shown in reports.
-
-    [Outputs and interpretation](outputs.md)
-
-</div>
-
-## From a PDB structure to a report
-
-Each selected residue becomes one qubit. FreeSASA exposure estimates set the initial excitation probabilities. Structural interactions supply the coupling graph, and an ordered circuit transforms the initial product state. Measurements provide the ensemble used by the report workflow.
-
-<figure class="paper-figure" markdown>
-
-[![Original paper workflow illustrating the mapping from Chignolin residues to qubits, controlled rotations, measurement, and energy analysis.](assets/paper/figure-1.png){ loading=lazy }](assets/paper/figure-1.png)
-
-<figcaption>Figure 2.1 from Patil, Bonde, and Choubey (2026), illustrated with Chignolin (1UAO). Reproduced unchanged. Select the image for full resolution. <a href="https://arxiv.org/abs/2608.05491">Paper</a> · <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/">CC BY-NC-ND 4.0</a></figcaption>
 </figure>
 
-The numerical pipeline returns state samples with shape `(shots, residues)` and one additive energy per shot. `run_analysis` adds information metrics, CSV exports, and figures. `generate_report` assembles those outputs into a PDF. The YAML wrapper and CLI perform all three stages.
+The [first-analysis guide](getting-started.md) provides a complete example using the small Trp-cage protein. Use a small structure first: simulator memory grows rapidly with the number of residues.
 
-## Scientific scope
+## What the results can tell you
 
-The model uses a fixed input structure, empirical residue energy tables, and a prescribed gate schedule. Its outputs support hypotheses about residue coupling and sensitivity. Calibration and comparison with experimental or simulation data are needed to establish physical predictive accuracy. The [scientific model](theory.md) records the implemented equations and assumptions.
+QProtSim supports exploratory research into residue associations and energy patterns. Its coordinates stay fixed, while the circuit samples combinations of the two model states. The results depend on the input structure, reference energies, contact rules, and sampling settings.
 
-## Software and attribution
+A large information score can identify an interesting residue or pair for further study. Establishing physical accuracy, biological communication, or the effect of a mutation requires independent evidence. The [scientific model](theory.md#assumptions-and-interpretation) explains these limits in more detail.
+
+## Research and attribution
 
 <div class="publication" markdown>
 
@@ -78,10 +69,10 @@ The model uses a fixed input structure, empirical residue energy tables, and a p
 
 Pratik Patil, Bhushan Bonde, and Bhaskar Choubey. 2026. arXiv:2608.05491.
 
-[Read on arXiv](https://arxiv.org/abs/2608.05491) · [Research overview and paper figures](paper.md) · [Download BibTeX](assets/citations/qprotsim.bib)
+[Read the paper](https://arxiv.org/abs/2608.05491) · [Research overview and figures](paper.md) · [Download BibTeX](assets/citations/qprotsim.bib)
 
 </div>
 
-When using QProtSim in research, cite the paper and record the exact software version or commit. These pages describe QProtSim 0.6.1 and the accompanying source tree. The research page includes a summary of the alphaXiv AI overview and original manuscript figures with attribution. [alphaXiv overview](https://www.alphaxiv.org/abs/2608.05491)
+When using QProtSim in research, cite the paper and record the software version, input structure, chain selection, and settings. These guides describe QProtSim 0.6.1.
 
-QProtSim software is distributed under the MIT License. [Source repository](https://github.com/pra-ashok/QProtSim) · [Software license](https://github.com/pra-ashok/QProtSim/blob/main/LICENSE)
+QProtSim software is distributed under the MIT License. Paper figures have their own attribution and licence. [Source repository](https://github.com/pra-ashok/QProtSim) · [Software licence](https://github.com/pra-ashok/QProtSim/blob/main/LICENSE)

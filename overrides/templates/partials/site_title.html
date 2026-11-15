@@ -1,5 +1,7 @@
-<a data-slot="button" class="button ghost gap-2 hidden lg:flex"
+<a data-slot="button" class="button ghost gap-2 qps-brand"
    href="{{ nav.homepage.url | url }}" aria-label="{{ config.site_name }} home">
+  <img class="qps-brand-logo" src="{{ config.theme.icon | url }}"
+       width="32" height="32" alt="" aria-hidden="true">
   {% if config.theme.show_title %}
   <span class="qps-site-name">{{ config.site_name }}</span>
   {% endif %}

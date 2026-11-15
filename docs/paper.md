@@ -1,5 +1,7 @@
 # The research behind QProtSim
 
+This page links the research paper, shows its original figures, and explains how to cite it. For a gentle introduction to the software, read [key concepts](concepts.md). For the model's definitions and assumptions, read the [scientific model](theory.md).
+
 <div class="publication" markdown>
 
 ## A Quantum Circuit Framework for Protein Ensemble-Level Energetics
@@ -14,21 +16,26 @@ arXiv:2608.05491 · 2026 · Version 1, submitted 6 August 2026
 
 </div>
 
-## Summary from alphaXiv
+<figure class="qps-cover" markdown>
 
-The following paraphrase condenses alphaXiv's AI overview. Its descriptions of the study should be read alongside the paper and the implementation's [mathematical definitions](theory.md).
+[![Original conference overview of quantum encoding of proteins, with residue interaction graphs, circuit implementation, an energy landscape, and entanglement illustrations.](assets/branding/qprotsim-cover.png){ .qps-cover-image width=989 height=551 }](assets/branding/qprotsim-cover.png)
 
-The overview presents a way to study protein energetics by assigning one qubit to each amino-acid residue. Solvent exposure and residue chemistry set the initial probabilities of ground and excited solvation states. Gates derived from structural contacts introduce dependencies between residues, and repeated measurements produce an ensemble of binary configurations.
+<figcaption>“Quantum Encoding of Protein for exploring Energy Landscape,” Pratik Patil et al. Presented at the MGMS conference in Oxford, UK, on 29 November 2025. Reproduced unchanged from the supplied figure. Select the image to view it at full size.</figcaption>
+</figure>
 
-Those configurations support energy histograms, residue sensitivity estimates, and information measures. The overview highlights comparisons between Trp-cage 1L2Y and the disulfide-stabilised chimera 9GDL. It describes a concentrated Trp6 sensitivity signal in 1L2Y and a broader distribution of energetic influence in 9GDL. Glycine, proline, and serine regions feature in the discussion of directional residue associations.
+## What is the main idea?
 
-The proposed applications include comparing mutations, investigating coupled residue groups, and generating hypotheses about allostery. [alphaXiv AI overview](https://www.alphaxiv.org/abs/2608.05491)
+The framework represents each amino-acid residue with one qubit and two possible solvation states. Solvent exposure and residue chemistry set the starting probabilities. Structural contacts determine circuit operations that introduce dependencies between residues. Repeated measurements produce many combinations of residue states, called an ensemble.
+
+QProtSim uses that ensemble to explore model energy distributions, residue sensitivity, and statistical associations between residues. The paper illustrates the framework with protein examples, including Trp-cage (1L2Y) and 9GDL. The figures below introduce the workflow and show example energy distributions.
+
+The practical use is to identify patterns and candidate residues for further study. Predicting experimental stability, mutation effects, or biological communication requires validation beyond these model scores. Read the paper alongside the [model assumptions](theory.md#assumptions-and-interpretation) when assessing those possibilities.
 
 ## Figures from the paper
 
 The three figures below are reproduced from Pratik Patil, Bhushan Bonde, and Bhaskar Choubey, arXiv:2608.05491v1, under the publication's CC BY-NC-ND 4.0 licence. [Original paper](https://arxiv.org/html/2608.05491v1) · [Figure licence](https://creativecommons.org/licenses/by-nc-nd/4.0/)
 
-Select a figure to open its original resolution. Source filenames and checksums are recorded with the assets. [Figure provenance](assets/paper/provenance.json)
+Select a figure to open its original resolution. [Figure attribution and source record](assets/paper/provenance.json)
 
 <figure class="paper-figure" markdown>
 
@@ -51,7 +58,7 @@ Select a figure to open its original resolution. Source filenames and checksums 
 <figcaption>Paper Figure 3.2. Energy histograms for 1L2Y and 9GDL from one million samples each. The histograms use different bin widths. <a href="https://arxiv.org/html/2608.05491v1">Source</a></figcaption>
 </figure>
 
-The study reports energy and residue-information comparisons for 1L2Y and 9GDL using approximately one million circuit measurements. Its figures describe sampled residue states. The [theory guide](theory.md) records the equations and estimator conventions used by this version of QProtSim. [Methods and results](https://arxiv.org/html/2608.05491v1)
+These histograms describe sampled model energies. Each protein has its own residue composition, and the plots use different bin widths, so compare their scales and captions before interpreting their shapes. The [scientific model](theory.md) explains how energies and information scores are calculated. [Paper methods and results](https://arxiv.org/html/2608.05491v1)
 
 ## Cite the paper
 

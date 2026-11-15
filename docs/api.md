@@ -1,19 +1,47 @@
-# Python API
+# Using QProtSim from Python
 
-The import namespace is `qprotsim`. The command aliases `QProtSim`, `QPS`, and `qps` all call the same CLI.
+Use Python when you want to inspect tables, work with sample arrays, or combine QProtSim with your own analysis. The package name in imports is `qprotsim`.
 
-## Generate an analysis and a PDF
+If you prefer running commands, start with the [first-analysis guide](getting-started.md). You can also run the same configuration file from Python, as shown below. The later sections cover direct access to results and information measures.
 
-`run_analysis` is the main entry point for working with the results in Python. It samples the circuit, writes CSV files and figures, and returns an `AnalysisOutputs` object. Call `generate_report` with that object to write the PDF.
+## Run an existing configuration
+
+This is the shortest route to a complete report. Create `config.yaml` using the [configuration guide](configuration.md), then run:
+
+```python
+from pathlib import Path
+from qprotsim.report_analysis import run_analysis_from_yaml
+
+report_path = run_analysis_from_yaml(Path("config.yaml"))
+print(report_path)
+```
+
+The function writes the PDF, CSV tables, and figures, then returns the PDF's path. To override the output settings in the file:
+
+```python
+report_path = run_analysis_from_yaml(
+    config_path=Path("config.yaml"),
+    output_dir=Path("outputs/repeat"),
+    report_filename="report.pdf",
+)
+```
+
+Use a new output directory when you want to keep earlier results. For a batch configuration, use `run_batch_analysis_from_yaml(Path("batch.yaml"))` from the same module. It returns a dictionary mapping successful PDB codes to report paths.
+
+## Run an analysis and inspect its results
+
+This example downloads a small structure, samples the model, and creates a report. An internet connection is needed for the download. For your own local file, replace the `fetch_pdb` call with `Path("input/my_protein.pdb")`.
 
 ```python
 from pathlib import Path
 
 from qprotsim.circuit import Config
+from qprotsim.helper import fetch_pdb
 from qprotsim.report_analysis import generate_report, run_analysis
 
+pdb_path = fetch_pdb("1L2Y", output_dir="input")
 cfg = Config(
-    pdb_path="input/1L2Y.pdb",
+    pdb_path=str(pdb_path),
     protein_only=True,
     shots=10_000,
     pl_device="default.qubit",
@@ -41,20 +69,20 @@ print(outputs.info_df.head())
 print(outputs.results["Z_samples"].shape)
 ```
 
-The PDB file must exist before this example runs. Use `fetch_pdb` below or a YAML configuration with `pdb_code` to download it.
+`run_analysis` returns the data and writes tables and figures. `generate_report` uses those results to create the PDF. The output directory is created automatically by `run_analysis`.
 
 ### `Config`
 
-```text
-Config(
-    pdb_path: str,
-    protein_only: bool = True,
-    shots: int = 100_000,
-    pl_device: str = "default.qubit",
-)
-```
+`Config` holds the structure and sampling settings.
 
-`pdb_path` identifies the structure. `protein_only` filters the residue selection. `shots` controls the number of sampled configurations. `pl_device` chooses the PennyLane device. Chain selection belongs to `run_analysis` or `run_pipeline`.
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `pdb_path` | Required | Path to an existing PDB file, passed as a string. |
+| `protein_only` | `True` | Select protein residues. Standard amino acids have the reference values needed by the model. |
+| `shots` | `100_000` | Number of sampled configurations. |
+| `pl_device` | `"default.qubit"` | Simulator backend. See [installation](installation.md). |
+
+Pass the chain separately to `run_analysis` or `run_pipeline`. Use `chain=None` to select all chains; review the selected size before sampling.
 
 ### `run_analysis`
 
@@ -69,34 +97,43 @@ run_analysis(
 ) -> AnalysisOutputs
 ```
 
-| Argument | Meaning |
+`molecule_name` appears in the report and exported filenames. Use a simple name containing letters, numbers, spaces, or underscores. `output_dir` should be a `pathlib.Path`. The optional `run_stamp` labels the report; it does not give each exported file a unique name.
+
+`bins` controls the energy plots. The residue information scores use a separate default of 10,000 histogram bins. Motif analysis requires at least 20 excited-source observations by default. If that optional stage fails, the remaining analysis can still finish.
+
+### Read `AnalysisOutputs`
+
+For `S` shots and `N` selected residues:
+
+| Field | What it contains |
 | --- | --- |
-| `cfg` | Structure, residue filter, shot count, and device settings. |
-| `molecule_name` | Display name and artifact prefix. Use a simple name containing letters, numbers, spaces, or underscores. |
-| `chain` | Chain ID, or `None` to select all chains. |
-| `output_dir` | `pathlib.Path` for the output directory, created as needed. |
-| `bins` | Resolution of energy plots. The residue information calculation uses its separate default of 10,000 bins. |
-| `run_stamp` | Optional report timestamp string, normally `YYYYMMDD_HHMMSS`. |
+| `results_df` | One row per residue: `res_index`, `resname`, `SASA_norm`, `p_exc`, and `p_ground`. |
+| `info_df` | Residue names and normalized `KL_ground` and `KL_exc` sensitivity scores. |
+| `mi_matrix` | Symmetric `N × N` mutual information matrix, in bits. |
+| `dei_matrix` | `N × N` directional excitation information matrix, in bits; rows are targets and columns are sources. |
+| `joint_counts` | Four `N × N` joint probability arrays, ordered `00`, `01`, `10`, `11`. Despite the field name, these contain probabilities. |
+| `results` | Samples, energies, and model parameters; the main keys are described below. |
+| `plot_paths` | Dictionary of generated figure paths. |
+| `fig_numbers` | Dictionary of figure numbers used by the report. |
+| `run_stamp` | Report timestamp. |
 
-`run_analysis` first attempts structure images, then runs the numerical pipeline, exports residue and circuit data, calculates information matrices, and generates plots. Motif allostery runs with `min_support=20`. A failed motif analysis emits a warning and the remaining report artifacts continue.
+The MI, DEI, and joint probability matrices have zero diagonals by convention. In `joint_counts`, `0` means ground and `1` means excited.
 
-### `AnalysisOutputs`
+Array positions follow the selected residue order and start at zero in Python. Exported `res_index` values start at one. These positions may differ from PDB residue numbers. Use the original structure to map results back to chain identifiers and residue numbers.
 
-For `S` shots and `N` selected residues, the returned dataclass has these fields.
+```python
+samples = outputs.results["Z_samples"]
+energies = outputs.results["E"]
 
-| Field | Contents |
-| --- | --- |
-| `results` | Raw pipeline dictionary described below. |
-| `results_df` | `N` rows with `res_index`, `resname`, `SASA_norm`, `p_exc`, and `p_ground`. |
-| `info_df` | `N` rows with `res_index`, `KL_ground`, `KL_exc`, and the merged `resname`. |
-| `dei_matrix` | `N × N` directional excitation information in bits, indexed as `[target, source]`. |
-| `mi_matrix` | `N × N` symmetric mutual information in bits. |
-| `joint_counts` | Four `N × N` arrays containing joint-state probabilities, ordered `00`, `01`, `10`, `11`. |
-| `plot_paths` | Mapping from plot keys to `Path` objects. Some keys refer to the same figure. |
-| `fig_numbers` | Mapping from plot keys to report figure numbers. |
-| `run_stamp` | Timestamp used in the report summary. |
+# Each row is a shot; each column is a selected residue.
+print(samples.shape, energies.shape)
 
-Both information matrices have zero diagonals. Joint-state arrays also have zero diagonals. Residue indices in the data frames are sequential, one-based positions in the selected analysis order. Recover original PDB residue numbers and chain IDs from the input structure when mapping results back to atoms.
+# Sampled excitation frequency for the first selected residue.
+print((samples[:, 0] == -1).mean())
+
+# Excited source at position 1, target at position 0.
+print(outputs.dei_matrix[0, 1])
+```
 
 ### `generate_report`
 
@@ -110,106 +147,43 @@ generate_report(
 ) -> None
 ```
 
-This function assembles the existing results and image files into a ReportLab PDF. Ensure the parent of `output_path` exists. The `run_analysis` call above already creates `output_dir`.
+Pass the same configuration, molecule name, and chain used in `run_analysis`. The parent directory of `output_path` must exist. The example above writes into the directory already created for the analysis.
 
-## Run a YAML workflow
+## Work with samples and energies
 
-```python
-from pathlib import Path
-from qprotsim.report_analysis import run_analysis_from_yaml
-
-report_path = run_analysis_from_yaml(
-    config_path=Path("config.yaml"),
-    output_dir=Path("outputs/trp_cage"),
-    report_filename="report.pdf",
-)
-print(report_path)
-```
-
-```text
-run_analysis_from_yaml(
-    config_path: Path,
-    output_dir: Path | None = None,
-    report_filename: str | None = None,
-) -> Path
-
-run_batch_analysis_from_yaml(
-    config_path: Path,
-    output_dir: Path | None = None,
-) -> dict[str, Path]
-
-load_yaml_config(path: Path) -> dict
-```
-
-`run_analysis_from_yaml` returns the PDF path after generating all outputs. Function arguments override YAML output settings. `run_batch_analysis_from_yaml` returns a mapping from successful PDB codes to their PDF paths. When `batch_mode` is false, its return value is `{"single": report_path}`. See the [configuration reference](configuration.md) for supported keys, path resolution, and batch behavior.
-
-## Use the numerical pipeline
+For numerical results without the full set of report tables and figures, use `run_pipeline`:
 
 ```python
 from qprotsim.pipeline import run_pipeline
 
+# Reuse cfg from the earlier example.
 results = run_pipeline(
     cfg=cfg,
     molecule_name="Trp Cage",
     chain="A",
     plot_energy=False,
 )
-
 samples = results["Z_samples"]
 energies = results["E"]
-print(samples.shape, energies.shape)
 ```
 
-```text
-run_pipeline(
-    cfg: Config,
-    molecule_name: str,
-    chain: str | None = "A",
-    plot_energy: bool = True,
-    bins: int = 1,
-    plot_path: str | None = None,
-    save_scatter_plot: bool = True,
-    scatter_plot_path: str | None = None,
-) -> dict
-```
-
-`plot_energy=True` enables an energy histogram. `save_scatter_plot=True` additionally generates the energy density plot. `plot_path` and `scatter_plot_path` supply the corresponding output paths. Pass an explicit `bins` value such as `100` when enabling plots.
-
-| Result key | Shape or type | Meaning |
+| Result key | Shape | Meaning |
 | --- | --- | --- |
-| `Z_samples` | `(S, N)` array | Pauli-Z outcomes. `+1` means ground and `-1` means excited. |
-| `E` | `(S,)` array | Total energy of each sampled configuration, in kJ mol⁻¹. |
-| `E0`, `E1` | `(N,)` arrays | Ground and excited reference energies, in kJ mol⁻¹. |
-| `p_exc` | Length-`N` pandas Series | Initial excitation propensity from exposure and residue chemistry. |
-| `p_ground` | `(N,)` array | Ground-state frequency measured after the coupling circuit. |
-| `resnames` | Length-`N` list | Three-letter names in analysis order. |
-| `alpha_SASA` | `(N,)` array | Relative SASA, capped at `0.999`. |
-| `pairs` | List of `(i, j)` tuples | Coupled zero-based residue positions. |
-| `kijs` | Mapping from pair to float | Normalized structural coupling values. |
-| `kij_terms` | Mapping from pair to dictionary | Coupling component decomposition and intermediate factors. |
-| `entanglement_schedule` | List of dictionaries | Ordered directed transfers with drive, probability, and rotation parameters. |
+| `Z_samples` | `(S, N)` | Residue states: `+1` is ground, `-1` is excited. |
+| `E` | `(S,)` | Additive model energy for each shot, in kJ mol⁻¹. |
+| `E0`, `E1` | `(N,)` | Ground and excited reference energies, in kJ mol⁻¹. |
+| `p_exc` | Length `N` | Starting excitation probability for each residue. |
+| `p_ground` | `(N,)` | Ground-state frequency after coupling and sampling. |
+| `resnames` | Length `N` | Three-letter residue names in sample-column order. |
+| `alpha_SASA` | `(N,)` | Relative solvent exposure, capped at `0.999`. |
 
-`p_exc` describes initialization, while `1 - p_ground` describes the sampled excitation frequency after the coupling gates.
+The final excitation frequency is `1 - results["p_ground"]`. It can differ from `results["p_exc"]` because the latter describes the starting state.
 
-### Export tables
+For a detailed examination of the model, `pairs`, `kijs`, `kij_terms`, and `entanglement_schedule` contain the residue pairs, coupling strengths, coupling components, and ordered circuit parameters. See the [model definitions](theory.md#mathematical-definitions) for their scientific meaning.
 
-```python
-from qprotsim.pipeline import (
-    export_entanglement_parameters,
-    export_residue_statistics,
-)
+## Calculate information measures
 
-residue_table = export_residue_statistics(
-    results, out_csv="residue_statistics.csv"
-)
-gate_table = export_entanglement_parameters(
-    results, out_csv="entanglement_parameters.csv"
-)
-```
-
-Each function writes a CSV and returns its pandas data frame. The residue export defaults to `residue_propensity.csv`. The circuit export defaults to `entanglement_parameters.csv` and uses `yy_cap=pi/6`, `yy_probability_threshold=0.02`, and `apply_yy_diffusion=True`. These values match the normal sampling circuit. When supplying a custom circuit, pass its settings to the exporter as well.
-
-## Calculate information from samples
+You can calculate these measures from the samples returned by either workflow. Convert the Pauli-Z samples to explicit binary excitation states for MI, DEI, and residue information. Keep the original Pauli-Z samples for the joint probability function.
 
 ```python
 from qprotsim.info_theory import (
@@ -219,30 +193,33 @@ from qprotsim.info_theory import (
     residue_information_gain,
 )
 
-mi = mutual_information_matrix(samples)
-dei = directional_excitation_information(samples, threshold=0.0)
-p00, p01, p10, p11 = joint_state_matrices(samples)
-info = residue_information_gain(samples, energies, bins=100)
-```
-
-| Function | Return value and conventions |
-| --- | --- |
-| `mutual_information_matrix(Z_samples, eps=1e-12)` | Symmetric `N × N` mutual information in bits. Accepts Pauli-Z or binary excitation samples. |
-| `directional_excitation_information(Z_samples, threshold=0.0)` | `N × N` conditional KL scores in bits, with target rows and excited-source columns. The threshold is subtracted and results are clamped at zero. |
-| `joint_state_matrices(Z_samples)` | Tuple of four joint probability matrices. Requires Pauli-Z samples. The `0` and `1` labels mean ground and excited. |
-| `residue_information_gain(Z_samples, E_total, bins=10000)` | Data frame containing `res_index`, `KL_ground`, and `KL_exc`. Each KL column is normalized across residues. |
-
-For the first, second, and fourth functions, binary input uses `0=ground`, `1=excited`. Encoding is inferred from whether any negative value occurs. Explicit binary conversion avoids ambiguity for a sample matrix containing only `+1` Pauli-Z outcomes.
-
-```python
 binary_excited = (samples == -1).astype("uint8")
 mi = mutual_information_matrix(binary_excited)
 dei = directional_excitation_information(binary_excited)
+info = residue_information_gain(binary_excited, energies, bins=100)
+p00, p01, p10, p11 = joint_state_matrices(samples)
 ```
 
-The residue information implementation requires observed samples in both states for each residue and a nonzero total in each KL column to produce finite normalized values. Sparse or deterministic samples can produce `NaN`. Check `info[["KL_ground", "KL_exc"]].isna()` before interpreting rankings. See [the theory](theory.md) for the equations and units.
+| Function | Result |
+| --- | --- |
+| `mutual_information_matrix(samples)` | Symmetric `N × N` dependence scores in bits. |
+| `directional_excitation_information(samples, threshold=0.0)` | `N × N` conditional KL scores in bits, indexed `[target, source]`. A nonnegative threshold is subtracted, then values are clamped at zero. |
+| `residue_information_gain(samples, energies, bins=10000)` | Data frame with `res_index`, `KL_ground`, and `KL_exc`. Each score column is normalized separately across residues. |
+| `joint_state_matrices(z_samples)` | Four joint probability matrices for `00`, `01`, `10`, and `11`; requires Pauli-Z `+1`/`-1` samples. |
 
-### Motif allostery
+The first three functions also accept Pauli-Z samples, but an array containing only `+1` values has an ambiguous encoding. The explicit binary conversion above avoids that ambiguity. Binary states use `0=ground` and `1=excited`.
+
+Check for missing scores before interpreting rankings:
+
+```python
+print(info[["KL_ground", "KL_exc"]].isna().any())
+```
+
+`NaN` values can occur when a residue has no observations in one state or when the total raw divergence is zero. A DEI source column is zero when the source is never observed excited. Review state counts as well as scores, especially for rare excitations. The [theory guide](theory.md) explains the definitions and limitations.
+
+## Examine groups of connected residues
+
+For advanced analysis, `analyse_motif_allostery` groups associations over small structural motifs, including residue pairs and triads. Reuse the structure, chain, and residue selection that produced the samples:
 
 ```python
 from qprotsim.info_theory import analyse_motif_allostery
@@ -259,48 +236,6 @@ motifs = analyse_motif_allostery(
 )
 ```
 
-The structure supplies peptide dimers, peptide trimers, and noncovalent triads. This workflow calculates the signed excitation contribution `q_exc * ln(q_exc / p_exc)` in nats before aggregating regions. Default aggregation uses `motif_agg_mode="mean"`, `affinity_scale_percentile=95.0`, and automatic cluster count. `min_support` sets the minimum excited-source sample count, with `min_support_res` available as an explicit override. Returned arrays include `residue_allostery_matrix`, `region_to_residue_matrix`, `membership_matrix`, `directional_region_coupling_matrix`, `affinity_matrix`, and `cluster_labels`. The dictionary also provides data-frame views and `saved_paths` for files written when `save_dir` is supplied.
+`min_support` is the minimum number of excited-source observations. The returned dictionary includes `residue_allostery_matrix`, `directional_region_coupling_matrix`, `affinity_matrix`, `cluster_labels`, and `saved_paths`.
 
-## Fetch and inspect structures
-
-```python
-from qprotsim.helper import fetch_pdb, per_residue_sasa
-
-pdb_path = fetch_pdb("1L2Y", output_dir="input")
-relative_sasa = per_residue_sasa(str(pdb_path), chain="A")
-```
-
-`fetch_pdb(pdb_code, output_dir=None, force_download=False, verify_checksum=True)` returns a `Path`, reusing a cached file when possible. `batch_fetch_pdb(pdb_codes, output_dir=None, force_download=False, verify_checksum=True, delay=0.5)` returns a mapping from uppercase PDB codes to paths when all downloads succeed. It attempts each requested download and raises `RuntimeError` if any download failed.
-
-`per_residue_sasa(pdb_path, chain="A", protein_only=True)` returns a dictionary keyed by `(chain_label, resid, resname)`. Values are normalized relative SASA. `map_sasa_to_mda_resorder(u, sasa_dict, protein_only=True, chain="A")` aligns those values to an MDAnalysis universe and returns `(values, residue_names)`.
-
-## Inspect coupling and energy calculations
-
-```python
-import MDAnalysis as mda
-from qprotsim.coupling_factor import build_Kij_pairs
-
-universe = mda.Universe(cfg.pdb_path)
-pairs, couplings, components = build_Kij_pairs(
-    universe,
-    chain="A",
-    protein_only=True,
-    normalize=True,
-    return_terms=True,
-)
-```
-
-`build_Kij_pairs` returns zero-based residue pairs and their coupling values. With `return_terms=True`, the third result contains interaction components and intermediate factors. The function accepts custom `weights`, `omega`, and `sigma_omega`. Its defaults include `exclude_bonded=False`, `min_seq_separation=1`, `use_pbc=False`, and `estimate_omega_from_local_stiffness=True`. Keep the selection and chain settings aligned with those used to create the sample columns.
-
-```python
-from qprotsim.circuit import energy_from_samples, per_residue_energies
-
-ground_energies, excited_energies = per_residue_energies(results["resnames"])
-configuration_energies = energy_from_samples(
-    samples, ground_energies, excited_energies
-)
-```
-
-`per_residue_energies(resnames)` selects the default octanol reference table in the supplied residue order. `energies_ref(energies_ref="bulky")` returns that three-letter-name lookup table, and `energies_ref("alkyl")` returns the alternate alkyl-chain table. `energy_from_samples` requires Pauli-Z samples and sums ground or excited residue energies for each configuration.
-
-The implementation of these interfaces is in [`report_analysis.py`](https://github.com/pra-ashok/QProtSim/blob/main/src/qprotsim/report_analysis.py), [`pipeline.py`](https://github.com/pra-ashok/QProtSim/blob/main/src/qprotsim/pipeline.py), [`info_theory.py`](https://github.com/pra-ashok/QProtSim/blob/main/src/qprotsim/info_theory.py), and [`helper.py`](https://github.com/pra-ashok/QProtSim/blob/main/src/qprotsim/helper.py).
+Motif scores use a signed excitation contribution in nats, while MI and DEI use their own definitions in bits. Read motif scores using the [motif association definition](theory.md#motif-association). These associations help form hypotheses about connected residues; establishing biological allostery requires independent evidence.
