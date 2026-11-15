@@ -14,8 +14,8 @@ supports batch analysis from PDB identifiers.
 
 The MkDocs documentation includes a first-run guide, configuration and API
 references, mathematical theory, and academic-style diagrams.
-[Read the documentation](docs/index.md) · [Installation](docs/installation.md) ·
-[Python API](docs/api.md) · [Theory and equations](docs/theory.md)
+[Read the documentation](https://pra-ashok.github.io/QProtSim/) · [Installation](https://pra-ashok.github.io/QProtSim/installation/) ·
+[Python API](https://pra-ashok.github.io/QProtSim/api/) · [Theory and equations](https://pra-ashok.github.io/QProtSim/theory/)
 
 ## Scientific Abstract
 
@@ -113,7 +113,7 @@ python -m mkdocs serve
 ```
 
 The documentation-only installation and accelerator checks are described in
-the installation guide. [Complete installation instructions](docs/installation.md)
+the installation guide. [Complete installation instructions](https://pra-ashok.github.io/QProtSim/installation/)
 
 ## Quick Start
 
@@ -353,7 +353,7 @@ The energy of each sampled configuration is the sum of its selected local
 `E0`/`E1` values. Couplings enter the circuit schedule. Hydrogen-bond and
 packing scores are geometric approximations, and the water-mediated term is
 disabled in the current coupling builder. The implemented equations, units,
-and assumptions are documented with diagrams. [Theory and mathematical model](docs/theory.md)
+and assumptions are documented with diagrams. [Theory and mathematical model](https://pra-ashok.github.io/QProtSim/theory/)
 
 ## Python API
 
@@ -724,7 +724,7 @@ Motif analysis aggregates the signed excitation contribution
 `p = P(target excited)`. Sources must meet the configured minimum support.
 Its symmetric affinity combines absolute directional scores and applies
 percentile scaling. The full two-state DEI matrix above uses a separate
-calculation. [Information measures and motif affinity](docs/theory.md)
+calculation. [Information measures and motif affinity](https://pra-ashok.github.io/QProtSim/theory/)
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -885,7 +885,7 @@ pip install -e .
 Install the matching extra and verify the requested PennyLane device directly.
 For CUDA, check the NVIDIA driver and `pennylane-lightning-gpu`. For ROCm,
 check the AMD architecture, ROCm version, and `pennylane-lightning-amdgpu`.
-The installation guide includes backend smoke checks. [Backend verification](docs/installation.md)
+The installation guide includes backend smoke checks. [Backend verification](https://pra-ashok.github.io/QProtSim/installation/)
 
 For CPU execution, set
 
@@ -919,12 +919,12 @@ python -m pip install ".[visualization]"
 
 ## License
 
-QProtSim software is distributed under the MIT License. See `LICENSE`. The reproduced paper figures carry their original CC BY-NC-ND 4.0 licence and author attribution. [Figure credits and provenance](docs/paper.md#figures-from-the-paper)
+QProtSim software is distributed under the MIT License. See `LICENSE`. The reproduced paper figures carry their original CC BY-NC-ND 4.0 licence and author attribution. [Figure credits and provenance](https://pra-ashok.github.io/QProtSim/paper/#figures-from-the-paper)
 
 ## Citation
 
 If you use QProtSim in your research, cite the paper and include the exact software version or commit hash used to generate results.
 
-Pratik Patil, Bhushan Bonde, and Bhaskar Choubey. **A Quantum Circuit Framework for Protein Ensemble-Level Energetics**. 2026. arXiv:2608.05491. [Paper](https://arxiv.org/abs/2608.05491) · [DOI](https://doi.org/10.48550/arXiv.2608.05491) · [BibTeX](docs/assets/citations/qprotsim.bib)
+Pratik Patil, Bhushan Bonde, and Bhaskar Choubey. **A Quantum Circuit Framework for Protein Ensemble-Level Energetics**. 2026. arXiv:2608.05491. [Paper](https://arxiv.org/abs/2608.05491) · [DOI](https://doi.org/10.48550/arXiv.2608.05491) · [BibTeX](https://pra-ashok.github.io/QProtSim/assets/citations/qprotsim.bib)
 
-The documentation includes an attributed summary of the alphaXiv AI overview and three original manuscript figures. [Research page](docs/paper.md) · [alphaXiv overview](https://www.alphaxiv.org/abs/2608.05491)
+The documentation includes an attributed summary of the alphaXiv AI overview and three original manuscript figures. [Research page](https://pra-ashok.github.io/QProtSim/paper/) · [alphaXiv overview](https://www.alphaxiv.org/abs/2608.05491)
