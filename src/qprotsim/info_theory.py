@@ -53,10 +53,11 @@ def residue_information_gain(Z_samples: np.ndarray,
 
     Returns:
         pandas DataFrame with columns:
-        ['res_index', 'p_exc', 'KL_ground', 'KL_exc', 'I_total', 'ΔE']
+        ['res_index', 'KL_ground', 'KL_exc']
 
         `KL_ground` and `KL_exc` are normalised after computation so each
-        column sums to 1 across residues.
+        column sums to 1 across residues. Raw divergences use natural logs.
+        Empty conditional samples or a zero column total can produce NaN.
     """
     import pandas as pd
     # Z_samples[Z_samples==-1] = 0

@@ -111,6 +111,7 @@ celerybeat.pid
 
 # Environments
 .env
+.venv/
 .venv
 env/
 venv/
@@ -145,6 +146,8 @@ cython_debug/
 # End of https://mrkandreev.name/snippets/gitignore-generator/#Python
 !README.md
 *.md
+!docs.md
+!docs/**/*.md
 input/qprotsim_*
 outputs/*
 

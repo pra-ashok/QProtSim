@@ -1,0 +1,81 @@
+site_name: QProtSim
+site_description: Residue-level protein modelling with quantum circuits and information theory
+repo_url: https://github.com/pra-ashok/QProtSim
+repo_name: pra-ashok/QProtSim
+edit_uri: edit/main/docs/
+copyright: >-
+  QProtSim · Authors: <a href="https://pra-ashok.github.io/CV/">Pratik Patil</a>,
+  <a href="https://scholar.google.com/citations?hl=en&amp;user=O3hkOEUAAAAJ">Bhushan Bonde</a>, and
+  <a href="https://scholar.google.com/citations?user=b88L0aEAAAAJ&amp;hl=en">Bhaskar Choubey</a>
+  · Software under the MIT License
+strict: true
+
+theme:
+  name: shadcn
+  custom_dir: overrides
+  locale: en
+  topbar_sections: false
+  show_title: true
+  show_stargazers: false
+  show_datetime: false
+  hide_source_files: true
+  pygments_style:
+    light: shadcn-light
+    dark: github-dark
+  katex_options:
+    strict: warn
+
+nav:
+  - Overview: index.md
+  - Getting started:
+      - Installation: installation.md
+      - First analysis: getting-started.md
+  - User guide:
+      - Configuration: configuration.md
+      - Outputs and interpretation: outputs.md
+      - Troubleshooting: troubleshooting.md
+  - Science:
+      - Model and equations: theory.md
+      - Paper and citation: paper.md
+  - Reference:
+      - Python API: api.md
+      - Development: development.md
+
+plugins:
+  - shadcn/search
+
+hooks:
+  - hooks/docs.py
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  - toc:
+      permalink: true
+  - codehilite
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      css_class: codehilite
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+extra_css:
+  - assets/stylesheets/extra.css
+
+validation:
+  nav:
+    omitted_files: warn
+  links:
+    not_found: warn
+    anchors: warn
+    unrecognized_links: warn

@@ -281,7 +281,7 @@ def plot_energy_distribution(
     fig_num: Optional[int] = None,
 ):
     set_academic_style()
-    fig, ax = plt.plot(figsize=figsize)
+    fig, ax = plt.subplots(figsize=figsize)
     sns.histplot(E_total, bins=bins, stat="count", color="#2C3E50", ax=ax)
     #sns.kdeplot(E_total, color="#E67E22", linewidth=1.5, ax=ax)
     ax.set_xlabel("Energy (kJ mol^-1)")

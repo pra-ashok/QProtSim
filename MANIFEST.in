@@ -1,0 +1,4 @@
+include mkdocs.yml docs.md
+recursive-include docs *.md *.css *.js *.svg *.png *.pdf *.json *.bib *.py
+recursive-include overrides *.html
+recursive-include hooks *.py

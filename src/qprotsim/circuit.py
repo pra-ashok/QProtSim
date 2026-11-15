@@ -22,12 +22,14 @@ from qprotsim.info_theory import debug_mode
 
 @dataclass
 class Config:
+    """Structure and sampling settings, using CPU execution by default."""
+
     pdb_path: str
     protein_only: bool = True
 
     # shots and device
     shots: int = 100_000
-    pl_device: str = "lightning.gpu"   # fallback to default.qubit if unavailable
+    pl_device: str = "default.qubit"
 
 # --------------------- Residue properties -------------------
 # Fauchere and Pliska, 1983
@@ -439,26 +441,17 @@ def compute_directed_transfer_schedule(
     Compute the CRY entanglement schedule from directed residue-residue
     excitation transfer probabilities.
 
-    The transfer probability is:
+    For the clipped initial excitation probability P_i, the implementation uses
 
-        DeltaP_{i -> j}
-        =
-        P_i (1 - P_j)
-        *
-        K_ij [mu_i - mu_j]_+
-        /
-        (
-            sum_{k in N(i)} K_ik 
-            + eps
+        mu_i = beta * (E1_i - E0_i) * P_i
+        degree_i = sum_{k in N(i)} K_ik
+        drive_ij = max(0, (mu_i - mu_j) / (mu_i + mu_j + 1e-5))
+        DeltaP_{i -> j} = clip(
+            2 * K_ij * drive_ij / (degree_i + degree_j + eps), 0, 1
         )
 
-    where
-
-        mu_i = beta * DeltaG_i + logit(P_i)
-
-    and
-
-        DeltaG_i = E1_i - E0_i.
+    DeltaP is a schedule score. Marginal excitation changes are determined by
+    the full ordered circuit.
 
     The CRY angle for layer ell is:
 
@@ -480,8 +473,7 @@ def compute_directed_transfer_schedule(
         Residue-wise solvation/free-energy values. DeltaG = E1 - E0.
 
     beta
-        Thermodynamic inverse-energy scale. Usually beta = 1 / (k_B T)
-        if E0 and E1 are in physical energy units.
+        Numerical energy scale in mu_i, defaulting to 1.0.
 
     eps
         Small numerical stabilizer.
@@ -497,7 +489,7 @@ def compute_directed_transfer_schedule(
         Ignore transfers with DeltaP <= min_deltaP.
 
     phi_scale
-        Extra multiplicative scale on the CRY angle.
+        Reserved argument. The current implementation does not apply it.
 
     phi_cap
         Optional maximum absolute CRY angle. Use None for no cap.
@@ -512,7 +504,7 @@ def compute_directed_transfer_schedule(
         Sorted list of dictionaries. Each entry contains:
 
             i, j, Kij, mu_i, mu_j, drive, denom_i,
-            deltaP, layer, discount, phi_raw, phi
+            deltaP, layer, discount_power, discount, phi
     """
 
     p = np.asarray(exc_propensities, dtype=float).reshape(-1)
@@ -835,10 +827,6 @@ def energy_from_samples(Z_samples: np.ndarray,
     Compute total configuration energy for each quantum sample.
     Ensures physical consistency with theoretical bounds.
     """
-    shots, n = Z_samples.shape
-    # detect binary convention (0/1 vs ±1)
-    print("what is min state", np.min(Z_samples))
-    print(Z_samples[1],Z_samples[1].shape)
     ground = (Z_samples == +1) # Indicator: Z-samples == +1
     # print("Ground samples",ground,type(ground),ground.shape)
     # base energy per configuration

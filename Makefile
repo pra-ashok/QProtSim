@@ -101,7 +101,7 @@ jupyter:  ## Start Jupyter notebook
 	jupyter notebook
 
 docs:  ## Build documentation
-	cd docs && make html
+	python -m mkdocs build --strict
 
 docs-serve:  ## Serve documentation locally
-	cd docs/_build/html && python -m http.server 8000
+	python -m mkdocs serve

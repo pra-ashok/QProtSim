@@ -1,0 +1,40 @@
+{
+  "paper": "A Quantum Circuit Framework for Protein Ensemble-Level Energetics",
+  "authors": [
+    "Pratik Patil",
+    "Bhushan Bonde",
+    "Bhaskar Choubey"
+  ],
+  "arxiv": "2608.05491v1",
+  "publication_url": "https://arxiv.org/abs/2608.05491",
+  "source_archive_url": "https://arxiv.org/src/2608.05491v1",
+  "license": "CC BY-NC-ND 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+  "figure_numbering": "Original figure numbers from the arXiv v1 manuscript.",
+  "figures": [
+    {
+      "file": "figure-1.png",
+      "original_file": "figures/Fig2.1_QCircuitEnergyLandscape.png",
+      "figure_number": "2.1",
+      "title": "Quantum residue-ensemble workflow",
+      "sha256": "22e921d8b757524290faf42b7925b798185c2f7c5dc7094c319e42006f25f754",
+      "modifications": "None. The original PNG is reproduced byte for byte."
+    },
+    {
+      "file": "figure-2.png",
+      "original_file": "figures/Fig4.2.png",
+      "figure_number": "4.2",
+      "title": "Conceptual illustration of quantum-circuit ensemble sampling",
+      "sha256": "55e079b7414894f3b8c59f126a3ca641da8d80281024aa14dcb5abe361578ef0",
+      "modifications": "None. The original PNG is reproduced byte for byte."
+    },
+    {
+      "file": "figure-3.png",
+      "original_file": "figures/Fig3.2_BothProtein_energy_distribution.png",
+      "figure_number": "3.2",
+      "title": "Relative sampled energy distributions for 1L2Y and 9GDL",
+      "sha256": "9b346ccd4ccda5ad8df3708a29ea9901aff084e52b18a42dbdc2ce856c93496a",
+      "modifications": "None. The original PNG is reproduced byte for byte."
+    }
+  ]
+}

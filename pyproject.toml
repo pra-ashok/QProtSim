@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -17,16 +17,96 @@ maintainers = [
 
 description = "QprotSim: Modelling Protein Dynamics with Quantum Computing"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
 
 license = "MIT"
+license-files = ["LICENSE"]
+
+dependencies = [
+  "numpy",
+  "MDAnalysis",
+  "biopython>=1.86",
+  "pandas>=2.2.2",
+  "requests>=2.32.3",
+  "OpenMM>=8.3.0",
+  "scipy>=1.11.4",
+  "freesasa>=2.2.0",
+  "netCDF4>=1.7.1",
+  "rich>=13.9.2",
+  "matplotlib>=3.7",
+  "plotly>=5.20.0",
+  "ipywidgets>=8.1.0",
+  "zstandard>=0.25.0",
+  "pennylane==0.44.0",
+  "pennylane-lightning==0.44.0",
+  "reportlab",
+  "pyyaml",
+  "seaborn>=0.13.2",
+  "pillow",
+  "psutil",
+  "pennylane-qiskit",
+  "gast>=0.7.0",
+]
+
+[project.optional-dependencies]
+# The base installation also supports CPU execution. Keep the CPU extra explicit
+# so installation commands can use the same form for every backend.
+cpu = ["pennylane-lightning==0.44.0"]
+# Lightning-GPU supplies its CUDA 12 user-space libraries through dependencies.
+# A compatible NVIDIA driver and supported Linux GPU are required separately.
+cuda = ["pennylane-lightning-gpu==0.44.0"]
+# Upstream wheels target Linux x86_64, MI300-series GPUs, and ROCm >=7.0.
+# Other AMD architectures require a HIP build of the matching Lightning release.
+rocm = ["pennylane-lightning-amdgpu==0.44.0"]
+visualization = ["pymol-open-source"]
+docs = [
+  "mkdocs>=1.6.1,<2",
+  "mkdocs-shadcn>=0.12.3,<0.13",
+  "pymdown-extensions>=10,<11",
+  "pygments>=2.18,<3",
+]
+dev = [
+  "pytest>=7.4.0",
+  "pytest-cov>=4.1.0",
+  "pytest-mock>=3.11.1",
+  "pytest-timeout>=2.1.0",
+  "pytest-xdist>=3.3.1",
+  "pytest-benchmark>=4.0.0",
+  "responses>=0.23.0",
+  "freezegun>=1.2.0",
+  "faker>=19.0.0",
+  "black>=23.7.0",
+  "flake8>=6.1.0",
+  "mypy>=1.5.0",
+  "pylint>=2.17.0",
+  "isort>=5.12.0",
+  "mkdocs>=1.6.1,<2",
+  "mkdocs-shadcn>=0.12.3,<0.13",
+  "pymdown-extensions>=10,<11",
+  "pygments>=2.18,<3",
+  "ipython>=8.14.0",
+  "ipdb>=0.13.13",
+  "pre-commit>=3.3.0",
+  "memory-profiler>=0.61.0",
+  "line-profiler>=4.0.0",
+]
+
+[project.scripts]
+qprotsim = "qprotsim.__main__:main"
+QProtSim = "qprotsim.__main__:main"
+QPS = "qprotsim.__main__:main"
+qps = "qprotsim.__main__:main"
 
 [tool.setuptools]
-license-files = ["LICENSE"]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.setuptools.dynamic]
 version = {attr = "qprotsim.__version__"}
@@ -34,3 +114,4 @@ version = {attr = "qprotsim.__version__"}
 [project.urls]
 Homepage = "https://github.com/pra-ashok/QProtSim"
 Issues = "https://github.com/pra-ashok/QProtSim/issues"
+Paper = "https://arxiv.org/abs/2608.05491"

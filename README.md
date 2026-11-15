@@ -1,5 +1,7 @@
 # QProtSim
 
+**Authors:** [Pratik Patil](https://pra-ashok.github.io/CV/) · [Bhushan Bonde](https://scholar.google.com/citations?hl=en&user=O3hkOEUAAAAJ) · [Bhaskar Choubey](https://scholar.google.com/citations?user=b88L0aEAAAAJ&hl=en)
+
 `QProtSim` is a Python package and command-line workflow for residue-level
 thermodynamic analysis of protein structures using quantum-circuit sampling.
 It maps a PDB structure to a residue graph, estimates solvent-accessible
@@ -7,8 +9,13 @@ surface area (SASA), builds residue-residue coupling terms, samples a
 PennyLane circuit, and produces publication-oriented PDF, CSV, and figure
 outputs for downstream analysis.
 
-The default pipeline is designed for single-chain protein structures, but the
-CLI also supports batch analysis from PDB identifiers.
+The pipeline accepts a selected chain or all protein chains, and the CLI also
+supports batch analysis from PDB identifiers.
+
+The MkDocs documentation includes a first-run guide, configuration and API
+references, mathematical theory, and academic-style diagrams.
+[Read the documentation](docs/index.md) · [Installation](docs/installation.md) ·
+[Python API](docs/api.md) · [Theory and equations](docs/theory.md)
 
 ## Scientific Abstract
 
@@ -19,8 +26,8 @@ each residue a two-state thermodynamic variable: a ground-like solvation state
 and an excited solvation state. Solvent-accessible surface area provides the
 local environmental signal, residue-specific transfer free energies provide the
 energetic scale, and a structure-derived Kij coupling model links residues
-through backbone connectivity, hydrogen bonding, salt bridges, van der Waals
-contacts, water-mediated interactions, and mass compatibility.
+through backbone connectivity, disulfide bonds, approximate hydrogen bonding,
+salt bridges, van der Waals contacts, frequency matching, and mass compatibility.
 
 The resulting residue graph is encoded as a quantum circuit in which local
 rotations initialize residue excitation propensities and entangling layers
@@ -43,10 +50,10 @@ analysis.
 - Residue-level SASA calculation with FreeSASA.
 - Thermodynamic excitation propensity estimation from residue exposure and
   reference amino-acid energetics.
-- Residue-residue coupling construction from backbone, hydrogen-bond, salt
-  bridge, van der Waals, water-mediated, and mass-mobility terms.
-- Quantum circuit sampling through PennyLane backends, including
-  `lightning.gpu` when the CUDA environment is available.
+- Residue-residue coupling construction from backbone, disulfide, approximate
+  hydrogen-bond, salt-bridge, van der Waals, frequency-matching, and mass terms.
+- Quantum circuit sampling through PennyLane CPU backends, NVIDIA
+  `lightning.gpu`, and AMD `lightning.amdgpu` when the matching environment is available.
 - Energy ensemble analysis, residue KL metrics, mutual information, directional
   excitation information, joint-state frequencies, and motif allostery outputs.
 - Automated PDF report generation with structure figures, plots, and summary
@@ -55,54 +62,58 @@ analysis.
 
 ## Installation
 
-### Requirements
+Use Python 3.11 or newer. From the repository root, choose the extra matching
+your simulator backend.
 
-- Python 3.11 or newer.
-- A working C/C++ compiler if Python wheels are unavailable for compiled
-  dependencies.
-- FreeSASA runtime support.
-- CUDA libraries only if using GPU-backed PennyLane devices.
+| Backend | Install command | YAML device |
+| --- | --- | --- |
+| CPU | `python -m pip install ".[cpu]"` | `default.qubit` or `lightning.qubit` |
+| NVIDIA CUDA | `python -m pip install ".[cuda]"` | `lightning.gpu` |
+| AMD ROCm | `python -m pip install ".[rocm]"` | `lightning.amdgpu` |
 
-On Debian/Ubuntu systems, install FreeSASA and common build tools first:
+The base command `python -m pip install .` also supports CPU execution. The
+backend plugins use the same PennyLane/Lightning 0.44.0 release. Installation
+extras add dependencies, and `pl_device` selects the device at runtime.
+
+A compatible NVIDIA driver is required for CUDA execution. The Lightning-GPU
+wheel installs its CUDA 12 user-space libraries and cuStateVec dependencies.
+The supported GPU generation starts at SM 7.0 (Volta). [Lightning-GPU requirements](https://github.com/PennyLaneAI/pennylane-lightning/blob/v0.44.0/doc/lightning_gpu/device.rst)
+
+Prebuilt ROCm wheels target Linux x86_64, AMD MI300-series GPUs, and ROCm 7.0 or
+newer. Other AMD hardware or ROCm versions require a matching HIP source build.
+[Lightning-AMDGPU requirements](https://github.com/PennyLaneAI/pennylane-lightning/blob/v0.44.0/doc/lightning_amdgpu/device.rst)
+
+Create an isolated environment before installing, for example
+
+```bash
+conda create -n qprotsim python=3.11 -y
+conda activate qprotsim
+python -m pip install ".[cpu]"
+```
+
+A working C/C++ compiler is needed when compiled dependency wheels are
+unavailable. On Debian/Ubuntu, common prerequisites are
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y freesasa build-essential
+sudo apt-get install -y build-essential python3-dev freesasa
 ```
 
-Create and activate an environment:
+Install optional PyMOL structure rendering with
 
 ```bash
-conda create -n QProtSim python=3.11 -y
-conda activate QProtSim
+python -m pip install ".[cpu,visualization]"
 ```
 
-Install the package from the repository root:
+For development and the MkDocs preview, run
 
 ```bash
-cd /path/to/QProtSim
-pip install .
+python -m pip install -e ".[cpu,dev]"
+python -m mkdocs serve
 ```
 
-For development and tests:
-
-```bash
-pip install -e ".[dev]"
-```
-
-### GPU Setup
-
-`QProtSim` defaults to `lightning.gpu`. If the GPU plugin or CUDA runtime is not
-available, the device creation code falls back to `default.qubit` for circuit
-execution. For reproducible GPU execution, install CuPy and CUDA through conda:
-
-```bash
-conda install cupy cuda-version=13.1 -c conda-forge
-```
-
-The repository also includes `run_with_cuda.sh`, a local wrapper that sets CUDA
-environment variables and then runs `QProtSim`. Edit the paths in that script if
-your conda environment is located elsewhere.
+The documentation-only installation and accelerator checks are described in
+the installation guide. [Complete installation instructions](docs/installation.md)
 
 ## Quick Start
 
@@ -114,9 +125,9 @@ molecule_name: Trp Cage
 chain: A
 protein_only: true
 shots: 100000
-pl_device: lightning.gpu
+pl_device: default.qubit
 bins: 10000
-output_dir: /absolute/path/to/QProtSim_outputs
+output_dir: /absolute/path/to/qprotsim_outputs
 report_file_name: trp_cage_report.pdf
 ```
 
@@ -140,15 +151,16 @@ verify_checksum: true
 chain: A
 protein_only: true
 shots: 100000
-pl_device: lightning.gpu
+pl_device: default.qubit
 bins: 10000
-output_dir: /absolute/path/to/QProtSim_outputs
+output_dir: /absolute/path/to/qprotsim_outputs
 report_file_name: trp_cage_report.pdf
 ```
 
 ## Command-Line Usage
 
-Show top-level help: QProtSim with alises as qprotsim, QPS, qps works to access package.
+Show top-level help using any of the `QProtSim`, `qprotsim`, `QPS`, or `qps`
+command aliases.
 
 ```bash
 QProtSim --help 
@@ -186,8 +198,7 @@ Accepted aliases for `analyze` are `analyse`, `analysis`, and
 
 ### Preprocess Command
 
-The CLI includes a preprocessing entry point for extracting molecular graph
-features from a PDB file:
+The CLI includes a preprocessing placeholder that prints the requested options.
 
 ```bash
 qps preprocess \
@@ -208,11 +219,15 @@ Run basin analysis from sampled states and optional reference energy arrays:
 qps basin \
   --z_samples outputs/trp_cage_z_samples.csv \
   --basins -60 -40 -40 -20 \
-  --out basin_results.csv
+  --out basin_results
 ```
 
-Optional `--E0` and `--E1` arguments can point to `.npy` files. If omitted,
-the package derives reference values from the internal residue energy table.
+Optional `--E0` and `--E1` arguments must be supplied together and can point to
+`.npy` files. If omitted, the package derives reference values from the internal
+residue energy table using the sample-column labels. The sample CSV must have a
+leading `shot` column and Pauli-Z states (`+1` ground and `-1` excited).
+`--out` names an output directory, or a JSON summary path when its suffix is
+`.json`.
 
 ## Configuration Reference
 
@@ -224,12 +239,12 @@ Single-run configurations must include either `pdb_path` or `pdb_code`, plus
 | `pdb_path` | one of `pdb_path`/`pdb_code` | none | Local PDB file to analyze. |
 | `pdb_code` | one of `pdb_path`/`pdb_code` | none | Four-character RCSB PDB ID to download before analysis. |
 | `molecule_name` | yes | none | Human-readable name used in reports and artifact prefixes. |
-| `chain` | no | `A` | Chain ID to analyze. Use `null`, empty string, or `--` to include all chains. |
+| `chain` | no | all chains in single-run YAML | Chain ID to analyze. Use `null`, empty string, or `--` to include all chains. Batch YAML defaults to `A`. |
 | `protein_only` | no | `true` | Restrict analysis to standard protein residues. |
 | `shots` | no | `100000` | Number of circuit samples. Increase for smoother ensemble statistics. |
-| `pl_device` | no | `lightning.gpu` | PennyLane device name. Falls back to `default.qubit` if unavailable. |
-| `bins` | no | `1000` | Number of bins for energy histograms and KL calculations. |
-| `output_dir` | no | `<config_dir>/QProtSim_outputs` | Directory for report assets and CSV files. |
+| `pl_device` | no | `default.qubit` | PennyLane device name. Device creation falls back to `default.qubit` if the requested device is unavailable. |
+| `bins` | no | `1000` | Number of bins for energy plots. Residue-information KL estimation uses its own default of `10000`. |
+| `output_dir` | no | `<config_dir>/qprotsim_outputs` | Directory for report assets and CSV files. |
 | `report_file_name` | no | `report.pdf` | PDF filename written at the root of `output_dir`. |
 | `download_dir` | no | current working directory | Directory for downloaded PDB files when `pdb_code` is used. |
 | `force_download` | no | `false` | Re-download the PDB file even if a cached file exists. |
@@ -259,7 +274,7 @@ molecule_names:
 chain: A
 protein_only: true
 shots: 100000
-pl_device: lightning.gpu
+pl_device: default.qubit
 bins: 10000
 report_file_name: "{pdb_code}_report.pdf"
 ```
@@ -271,7 +286,9 @@ qps analyze -c batch_config.yaml
 ```
 
 Each protein is written to its own subdirectory under `output_dir`, for example
-`batch_outputs/1l2y/1l2y_report.pdf`.
+`batch_outputs/1l2y/1l2y_report.pdf`. If `output_dir` is omitted, the batch root
+is `<config_dir>/qprotsim_batch_outputs`. Relative input, download, and explicit
+output paths are resolved from the current working directory.
 
 ## Output Artifacts
 
@@ -280,8 +297,8 @@ A typical single analysis produces:
 - `report.pdf` or the configured report filename.
 - `<molecule>_residue_stats.csv` with residue index, residue name, normalized
   SASA, excitation propensity, and sampled ground-state probability.
-- `<molecule>_residue_information_gain.csv` with normalized `KL_ground` and
-  `KL_exc` residue metrics.
+- `<molecule>_residue_information_gain.csv` with `res_index` and normalized
+  `KL_ground` and `KL_exc` residue contributions.
 - `<molecule>_z_samples.csv` with per-shot residue states.
 - `<molecule>_entanglement_parameters.csv` with the directed transfer schedule,
   gate type, residue labels, coupling strengths, transfer probabilities, and
@@ -299,7 +316,13 @@ A typical single analysis produces:
   motif-region affinity matrix heatmaps.
 
 Figure files are named with stable `figNN_...` prefixes so they can be cited
-directly from the generated PDF or reused in manuscripts.
+directly from the generated PDF or reused in manuscripts. Reusing an output
+directory can overwrite matching artifact names. `run_stamp` records run
+metadata and leaves the figure filenames unchanged.
+
+`p_exc` in residue statistics is the circuit initialization propensity.
+The sampled excitation probability is `1 - p_ground`. The exported `res_index`
+is the one-based analysis order, which can differ from the PDB residue number.
 
 ## Method Overview
 
@@ -326,34 +349,41 @@ The sampled-state convention is:
 Several exported information metrics convert this internally to a binary
 encoding where `0` is ground and `1` is excited.
 
+The energy of each sampled configuration is the sum of its selected local
+`E0`/`E1` values. Couplings enter the circuit schedule. Hydrogen-bond and
+packing scores are geometric approximations, and the water-mediated term is
+disabled in the current coupling builder. The implemented equations, units,
+and assumptions are documented with diagrams. [Theory and mathematical model](docs/theory.md)
+
 ## Python API
 
-The CLI is the recommended interface for full reports. Advanced users can call
-the core functions directly:
+The CLI generates full reports. Python callers can run the analysis and write
+the PDF in two steps. `run_analysis` returns an `AnalysisOutputs` object and
+writes CSVs and figures. `generate_report` writes the PDF.
 
 ```python
 from pathlib import Path
 
-from QProtSim.circuit import Config
-from QProtSim.report_analysis import run_analysis, generate_report
+from qprotsim.circuit import Config
+from qprotsim.report_analysis import run_analysis, generate_report
 
 cfg = Config(
     pdb_path="/absolute/path/to/1L2Y.pdb",
     protein_only=True,
     shots=100000,
-    pl_device="lightning.gpu",
+    pl_device="default.qubit",
 )
 
 outputs = run_analysis(
     cfg=cfg,
     molecule_name="Trp Cage",
     chain="A",
-    output_dir=Path("QProtSim_outputs"),
+    output_dir=Path("qprotsim_outputs"),
     bins=10000,
 )
 
 generate_report(
-    output_path=Path("QProtSim_outputs/trp_cage_report.pdf"),
+    output_path=Path("qprotsim_outputs/trp_cage_report.pdf"),
     molecule_name="Trp Cage",
     cfg=cfg,
     chain="A",
@@ -365,7 +395,7 @@ For a YAML-driven run from Python:
 
 ```python
 from pathlib import Path
-from QProtSim.report_analysis import run_analysis_from_yaml
+from qprotsim.report_analysis import run_analysis_from_yaml
 
 report_path = run_analysis_from_yaml(Path("config.yaml"))
 print(report_path)
@@ -379,24 +409,24 @@ helpers and should be treated as unstable.
 
 ### Core Configuration
 
-`QProtSim.circuit.Config`
+`qprotsim.circuit.Config`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `pdb_path` | `str` | Path to the input PDB file used for structure loading, SASA calculation, residue graph construction, and reporting. |
-| `protein_only` | `bool` | When `True`, restricts calculations to standard amino-acid residues. Set `False` only when nonstandard residues should remain in the model. |
+| `protein_only` | `bool` | When `True`, restricts calculations to standard amino-acid residues. Exposure and reference-energy tables cover the standard amino acids, so retaining other residues can fail during analysis. |
 | `shots` | `int` | Number of quantum-circuit samples. Larger values reduce sampling noise but increase runtime and memory use. |
-| `pl_device` | `str` | PennyLane device name, for example `lightning.gpu` or `default.qubit`. GPU devices require the matching CUDA/PennyLane environment. |
+| `pl_device` | `str` | PennyLane device name, default `default.qubit`. Other options include `lightning.qubit`, `lightning.gpu`, and `lightning.amdgpu`. Accelerated devices require their matching environment. |
 
 ### Report and Workflow Functions
 
-`QProtSim.report_analysis.load_yaml_config(path)`
+`qprotsim.report_analysis.load_yaml_config(path)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `path` | `Path` | YAML config file to load. The file must contain a mapping of option names to values. |
 
-`QProtSim.report_analysis.run_analysis_from_yaml(config_path, output_dir=None, report_filename=None)`
+`qprotsim.report_analysis.run_analysis_from_yaml(config_path, output_dir=None, report_filename=None)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -404,14 +434,14 @@ helpers and should be treated as unstable.
 | `output_dir` | `Path` or `None` | Optional override for the artifact directory. Takes priority over `output_dir` in the YAML file. |
 | `report_filename` | `str` or `None` | Optional report PDF filename. The report is written at the root of the resolved output directory. |
 
-`QProtSim.report_analysis.run_batch_analysis_from_yaml(config_path, output_dir=None)`
+`qprotsim.report_analysis.run_batch_analysis_from_yaml(config_path, output_dir=None)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `config_path` | `Path` | YAML file with `batch_mode: true` and a `pdb_codes` list. Common analysis settings are applied to each protein. |
 | `output_dir` | `Path` or `None` | Optional base directory for all batch outputs. Each PDB code receives its own subdirectory. |
 
-`QProtSim.report_analysis.run_analysis(cfg, molecule_name, chain, output_dir, bins=1000, run_stamp=None)`
+`qprotsim.report_analysis.run_analysis(cfg, molecule_name, chain, output_dir, bins=1000, run_stamp=None)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -419,10 +449,10 @@ helpers and should be treated as unstable.
 | `molecule_name` | `str` | Human-readable name used in plot titles, report text, and artifact prefixes. |
 | `chain` | `str` or `None` | Chain identifier to analyze. Use `None` for all chains. |
 | `output_dir` | `Path` | Directory where CSV files, figures, and intermediate analysis outputs are written. |
-| `bins` | `int` | Number of bins used for energy histograms and KL calculations. |
-| `run_stamp` | `str` or `None` | Optional timestamp string used for reproducible figure naming. If omitted, the function creates one. |
+| `bins` | `int` | Number of bins used for energy plots. Residue information gain uses its separate default of `10000`. |
+| `run_stamp` | `str` or `None` | Optional timestamp stored in run metadata. If omitted, the function creates one. Figure filenames use stable prefixes independently of this value. |
 
-`QProtSim.report_analysis.generate_report(output_path, molecule_name, cfg, chain, outputs)`
+`qprotsim.report_analysis.generate_report(output_path, molecule_name, cfg, chain, outputs)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -432,7 +462,7 @@ helpers and should be treated as unstable.
 | `chain` | `str` or `None` | Chain label reported in the run summary. |
 | `outputs` | `AnalysisOutputs` | Object returned by `run_analysis`; contains data frames, matrices, figures, and run metadata. |
 
-`QProtSim.pipeline.run_pipeline(cfg, molecule_name, chain="A", plot_energy=True, bins=1, plot_path=None, save_scatter_plot=True, scatter_plot_path=None)`
+`qprotsim.pipeline.run_pipeline(cfg, molecule_name, chain="A", plot_energy=True, bins=1, plot_path=None, save_scatter_plot=True, scatter_plot_path=None)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -445,14 +475,14 @@ helpers and should be treated as unstable.
 | `save_scatter_plot` | `bool` | When `True`, also saves the energy density plot. |
 | `scatter_plot_path` | `str` or `None` | Optional path for the energy density plot. If omitted, a default path is derived from `molecule_name` or `plot_path`. |
 
-`QProtSim.pipeline.export_residue_statistics(results, out_csv="residue_propensity.csv")`
+`qprotsim.pipeline.export_residue_statistics(results, out_csv="residue_propensity.csv")`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `results` | `dict` | Output dictionary from `run_pipeline`; must include residue names, SASA values, excitation propensities, and sampled ground-state probabilities. |
 | `out_csv` | `str` | Destination CSV path for per-residue statistics. |
 
-`QProtSim.pipeline.export_entanglement_parameters(results, out_csv="entanglement_parameters.csv", yy_cap=np.pi/6, yy_probability_threshold=0.02, apply_yy_diffusion=True)`
+`qprotsim.pipeline.export_entanglement_parameters(results, out_csv="entanglement_parameters.csv", yy_cap=np.pi/6, yy_probability_threshold=0.02, apply_yy_diffusion=True)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -464,20 +494,20 @@ helpers and should be treated as unstable.
 
 ### PDB, Download, and SASA Helpers
 
-`QProtSim.helper.compute_file_checksum(file_path, algorithm="sha256")`
+`qprotsim.helper.compute_file_checksum(file_path, algorithm="sha256")`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `file_path` | `str` | File whose checksum should be computed. |
 | `algorithm` | `str` | Hash algorithm accepted by `hashlib`, such as `md5`, `sha1`, or `sha256`. |
 
-`QProtSim.helper.get_pdb_checksum(pdb_code)`
+`qprotsim.helper.get_pdb_checksum(pdb_code)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `pdb_code` | `str` | Four-character RCSB PDB identifier. Used to query remote ETag/checksum metadata. |
 
-`QProtSim.helper.verify_pdb_file(file_path, pdb_code, expected_checksum=None)`
+`qprotsim.helper.verify_pdb_file(file_path, pdb_code, expected_checksum=None)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -485,7 +515,7 @@ helpers and should be treated as unstable.
 | `pdb_code` | `str` | PDB code used in warning and error messages. |
 | `expected_checksum` | `str` or `None` | Optional expected checksum. When omitted, only existence and basic file-size checks are performed. |
 
-`QProtSim.helper.fetch_pdb(pdb_code, output_dir=None, force_download=False, verify_checksum=True)`
+`qprotsim.helper.fetch_pdb(pdb_code, output_dir=None, force_download=False, verify_checksum=True)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -494,7 +524,7 @@ helpers and should be treated as unstable.
 | `force_download` | `bool` | Re-download even if a local file already exists. |
 | `verify_checksum` | `bool` | Validate downloaded or cached files when checksum metadata is available. |
 
-`QProtSim.helper.batch_fetch_pdb(pdb_codes, output_dir=None, force_download=False, verify_checksum=True, delay=0.5)`
+`qprotsim.helper.batch_fetch_pdb(pdb_codes, output_dir=None, force_download=False, verify_checksum=True, delay=0.5)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -504,7 +534,7 @@ helpers and should be treated as unstable.
 | `verify_checksum` | `bool` | Validate files when remote checksum metadata is available. |
 | `delay` | `float` | Delay in seconds between downloads to avoid overloading RCSB services. |
 
-`QProtSim.helper.per_residue_sasa(pdb_path, chain="A", protein_only=True)`
+`qprotsim.helper.per_residue_sasa(pdb_path, chain="A", protein_only=True)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -512,7 +542,7 @@ helpers and should be treated as unstable.
 | `chain` | `str` or `None` | Chain filter. Use `None` to include all chains. |
 | `protein_only` | `bool` | When `True`, keep only standard amino-acid residues. |
 
-`QProtSim.helper.map_sasa_to_mda_resorder(u, sasa_dict, protein_only=True, chain="A")`
+`qprotsim.helper.map_sasa_to_mda_resorder(u, sasa_dict, protein_only=True, chain="A")`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -521,7 +551,7 @@ helpers and should be treated as unstable.
 | `protein_only` | `bool` | Match the residue filter used during SASA calculation. |
 | `chain` | `str` or `None` | Chain filter matching the analysis target. |
 
-`QProtSim.helper.per_residue_ke(u, T=300.0, protein_only=True, seed=None)`
+`qprotsim.helper.per_residue_ke(u, T=300.0, protein_only=True, seed=None)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -532,7 +562,7 @@ helpers and should be treated as unstable.
 
 ### Coupling and Circuit Functions
 
-`QProtSim.coupling_factor.build_Kij_pairs(u, protein_only=True, chain="A", exclude_bonded=False, min_seq_separation=1, use_pbc=False, weights=None, omega=None, sigma_omega=None, estimate_omega_from_local_stiffness=True, normalize=True, return_terms=True)`
+`qprotsim.coupling_factor.build_Kij_pairs(u, protein_only=True, chain="A", exclude_bonded=False, min_seq_separation=1, use_pbc=False, weights=None, omega=None, sigma_omega=None, estimate_omega_from_local_stiffness=True, normalize=True, return_terms=True)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -542,20 +572,20 @@ helpers and should be treated as unstable.
 | `exclude_bonded` | `bool` | Skip neighboring residues when `True`. Keep `False` if backbone coupling should contribute. |
 | `min_seq_separation` | `int` | Sequence-distance cutoff used only when `exclude_bonded=True`. |
 | `use_pbc` | `bool` | Use periodic boundary dimensions from the MDAnalysis universe. |
-| `weights` | `Mapping[str, float]` or `None` | Optional weights for coupling terms: `BB`, `HB`, `salt`, `vdW`, and `wat`. |
+| `weights` | `Mapping[str, float]` or `None` | Optional weights for active coupling terms `BB`, `disulfide` (alias `SS`), `HB`, `salt`, and `vdW`. The `wat` term is disabled. |
 | `omega` | `Sequence`, `Mapping`, or `None` | Optional residue frequency values. If omitted, frequencies can be estimated from local stiffness. |
 | `sigma_omega` | `float` or `None` | Width of the frequency-matching Gaussian. If omitted, an automatic value is estimated. |
 | `estimate_omega_from_local_stiffness` | `bool` | Estimate relative residue frequencies from local coupling stiffness and mass when `omega` is omitted. |
 | `normalize` | `bool` | Normalize final Kij values by the maximum Kij so couplings are on a comparable scale. |
 | `return_terms` | `bool` | Return decomposed term values for reporting and heatmaps. |
 
-`QProtSim.circuit.energies_ref(energies_ref="bulky")`
+`qprotsim.circuit.energies_ref(energies_ref="bulky")`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `energies_ref` | `str` | Select reference energy table. Use `"bulky"` for octanol-like transfer values or `"alkyl"` for alkyl-chain values. |
 
-`QProtSim.circuit.compute_directed_transfer_schedule(exc_propensities, pairs, kijs, E0, E1, beta=1.0, eps=1.0e-12, gamma=0.95, max_layers=None, min_deltaP=0.0, phi_scale=1.0, phi_cap=np.pi/2, discount_start_power=1)`
+`qprotsim.circuit.compute_directed_transfer_schedule(exc_propensities, pairs, kijs, E0, E1, beta=1.0, eps=1.0e-12, gamma=0.95, max_layers=None, min_deltaP=0.0, phi_scale=1.0, phi_cap=np.pi/2, discount_start_power=1)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -573,7 +603,7 @@ helpers and should be treated as unstable.
 | `phi_cap` | `float` or `None` | Maximum absolute CRY angle. Use `None` for no cap. |
 | `discount_start_power` | `int` | Power used for the first gamma discount. Use `0` for undiscounted first layer or `1` for `gamma` on layer one. |
 
-`QProtSim.circuit.prepare_state_propensity(exc_propensities, kij_pairs, kijs, E0, E1, yy_cap=np.pi/6, apply_yy_diffusion=True, return_schedule=True, yy_probability_threshold=0.02)`
+`qprotsim.circuit.prepare_state_propensity(exc_propensities, kij_pairs, kijs, E0, E1, yy_cap=np.pi/6, apply_yy_diffusion=True, return_schedule=True, yy_probability_threshold=0.02, schedule=None)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -585,9 +615,10 @@ helpers and should be treated as unstable.
 | `yy_cap` | `float` or `None` | Maximum IsingYY angle for weak-diffusion corrections. |
 | `apply_yy_diffusion` | `bool` | Use weak YY diffusion for small transfer drives instead of only CRY gates. |
 | `return_schedule` | `bool` | Return the computed transfer schedule after applying gates. |
-| `yy_probability_threshold` | `float` | Threshold below which a transfer is treated as weak diffusion. |
+| `yy_probability_threshold` | `float` | A drive at or below this threshold selects weak YY diffusion. |
+| `schedule` | `list[dict]` or `None` | Optional precomputed directed-transfer schedule. When omitted, the function computes one. |
 
-`QProtSim.circuit.sample_bits(exc_propensities, kij_pairs, kijs, E0, E1, cfg, return_schedule=False)`
+`qprotsim.circuit.sample_bits(exc_propensities, kij_pairs, kijs, E0, E1, cfg, return_schedule=False)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -599,7 +630,7 @@ helpers and should be treated as unstable.
 | `cfg` | `Config` | Supplies shot count and PennyLane device. |
 | `return_schedule` | `bool` | When `True`, returns `(samples, entanglement_schedule)` instead of only the sample matrix. |
 
-`QProtSim.circuit.energy_from_samples(Z_samples, E0, E1)`
+`qprotsim.circuit.energy_from_samples(Z_samples, E0, E1)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -607,7 +638,7 @@ helpers and should be treated as unstable.
 | `E0` | `np.ndarray` | Ground-state residue energies. |
 | `E1` | `np.ndarray` | Excited-state residue energies. |
 
-`QProtSim.circuit.per_residue_energies(resnames)`
+`qprotsim.circuit.per_residue_energies(resnames)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -626,13 +657,13 @@ Additional public circuit helpers:
 | `kd_to_scores(resnames)` | `resnames`: residue names. | Converts Kyte-Doolittle hydrophobicity to hydrophobic/hydrophilic score arrays. |
 | `is_hydrophobic(resnames)` | `resnames`: residue names. | Returns a boolean hydrophobicity mask. |
 | `angles_from_probability(p)` | `p`: probability array. | Converts probabilities to RY rotation angles. |
-| `boltzmann_expectation(delta_E, T=298.0, k_B=8.314462618e-3)` | `delta_E`: energy gap; `T`: temperature; `k_B`: Boltzmann constant in matching units. | Computes two-state Boltzmann probabilities and expected energy. |
+| `boltzmann_expectation(delta_E, T=298.0, k_B=8.314462618e-3)` | `delta_E`: energy gap; `T`: temperature; `k_B`: molar gas constant in kJ mol⁻¹ K⁻¹ by default. | Computes two-state Boltzmann probabilities and expected energy. |
 | `excitation_propensities(SASA, etype=1)` | `SASA`: per-residue normalized SASA dictionary; `etype`: reserved energy-type selector. | Converts residue exposure and hydrophobicity into excitation probabilities. |
 | `make_device(n_qubits, name)` | `n_qubits`: wire count; `name`: PennyLane device name. | Creates a PennyLane device and falls back to `default.qubit` if the requested device fails. |
 
 ### Information-Theory and Allostery Functions
 
-`QProtSim.info_theory.residue_information_gain(Z_samples, E_total, bins=10000)`
+`qprotsim.info_theory.residue_information_gain(Z_samples, E_total, bins=10000)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -640,27 +671,43 @@ Additional public circuit helpers:
 | `E_total` | `np.ndarray` | Total energy for each sampled configuration. Must align with the rows of `Z_samples`. |
 | `bins` | `int` | Number of energy bins for KL divergence estimates. |
 
-`QProtSim.info_theory.directional_excitation_information(Z_samples, threshold=0.0)`
+The returned DataFrame contains exactly `res_index`, `KL_ground`, and `KL_exc`.
+Raw conditional energy-distribution KL values are computed using natural logs
+and then normalized independently so each returned KL column sums to one
+when its normalization is defined. These normalized values are dimensionless.
+Unobserved states or zero total information can produce non-finite entries.
+
+`qprotsim.info_theory.directional_excitation_information(Z_samples, threshold=0.0)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `Z_samples` | `np.ndarray` | Sample matrix of shape `(shots, n_res)`. |
 | `threshold` | `float` | Optional noise floor subtracted from each directional score after KL calculation. |
 
-`QProtSim.info_theory.mutual_information_matrix(Z_samples, eps=1e-12)`
+`DEI[i, j]` is the full conditional Bernoulli KL divergence in bits from source
+`j` to target `i`, conditioning on source excitation. The diagonal is zero.
+Sources with no excited observations receive a zero column.
+
+`qprotsim.info_theory.mutual_information_matrix(Z_samples, eps=1e-12)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `Z_samples` | `np.ndarray` | Sample matrix used to compute pairwise residue mutual information. |
 | `eps` | `float` | Small value added for numerical stability in probability ratios. |
 
-`QProtSim.info_theory.joint_state_matrices(Z_samples)`
+The returned pairwise mutual-information matrix is symmetric, uses bits, and
+has a zero diagonal.
+
+`qprotsim.info_theory.joint_state_matrices(Z_samples)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
-| `Z_samples` | `np.ndarray` | Sample matrix used to count `(0,0)`, `(0,1)`, `(1,0)`, and `(1,1)` pair states. |
+| `Z_samples` | `np.ndarray` | Pauli-Z sample matrix (`+1/-1`). Returns four joint-probability matrices for ground/ground, ground/excited, excited/ground, and excited/excited pairs, with zero diagonals. |
 
-`QProtSim.info_theory.compute_static_mi_from_counts(counts_00, counts_01, counts_10, counts_11, eps=1e-12)`
+`qprotsim.info_theory.compute_static_mi_from_counts(counts_00, counts_01, counts_10, counts_11, eps=1e-12)`
+
+This helper returns the `00` and `11` contributions to mutual information in
+nats. Individual contributions can be signed.
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -670,7 +717,14 @@ Additional public circuit helpers:
 | `counts_11` | `np.ndarray` | Pairwise count/probability matrix for both residues excited. |
 | `eps` | `float` | Numerical guard for logarithms and divisions. |
 
-`QProtSim.info_theory.analyse_motif_allostery(...)`
+`qprotsim.info_theory.analyse_motif_allostery(...)`
+
+Motif analysis aggregates the signed excitation contribution
+`q * ln(q / p)` in nats, where `q = P(target excited | source excited)` and
+`p = P(target excited)`. Sources must meet the configured minimum support.
+Its symmetric affinity combines absolute directional scores and applies
+percentile scaling. The full two-state DEI matrix above uses a separate
+calculation. [Information measures and motif affinity](docs/theory.md)
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -684,7 +738,7 @@ Additional public circuit helpers:
 | `protein_only` | `bool` | Keep only standard amino-acid residues during motif construction. |
 | `min_support` | `int` | Legacy alias used when `min_support_res` is omitted. |
 | `min_support_res` | `int` or `None` | Minimum number of excited observations required for a residue to act as a supported source. |
-| `motif_agg_mode` | `str` | Aggregation mode for residue-to-motif DEI blocks: `mean`, `sum_abs`, or `topk_mean`. |
+| `motif_agg_mode` | `str` | Aggregation mode for signed residue-score blocks, using `mean`, `sum_abs`, or `topk_mean`. |
 | `motif_agg_topk` | `int` | Number of largest absolute block values used by `topk_mean`. |
 | `affinity_scale_percentile` | `float` | Percentile used to robustly scale the symmetric motif affinity matrix. |
 | `n_clusters` | `int` or `None` | Number of motif clusters for spectral clustering. If omitted, a bounded automatic value is used. |
@@ -700,6 +754,7 @@ Additional public circuit helpers:
 
 Most plotting functions return a Matplotlib figure and axes object and save
 both PNG and PDF versions when `save_path` ends in `.png`.
+`plot_energy_distribution_histogram` writes its figure and returns `None`.
 
 Common plotting parameters:
 
@@ -739,7 +794,7 @@ Individual plotting functions:
 | `plot_dual_axis_line_comparison(info_df, results_df, results, molecule_name="Trp Cage", metric1_col="p_ground", metric2_col="KL_exc", metric1_label=..., metric2_label=..., color1=..., color2=..., connector_color=..., connector_alpha=0.6, connector_linewidth=0.9, figsize=(10, 5), save_path=..., dpi=600, fig_num=None)` | Dual-axis line version of the stability/sensitivity comparison. |
 | `plot_stability_vs_sensitivity_quadrants(info_df, results_df, results, molecule_name="Trp Cage", metric1_col="p_ground", metric2_col="KL_exc", metric1_label=..., metric2_label=..., quadrant_method="mean", x_threshold=None, y_threshold=None, point_color=..., quadrant_line_color=..., annotate_residues=True, figsize=(7, 7), save_path=..., dpi=600, fig_num=None)` | Quadrant scatter plot. `quadrant_method`, `x_threshold`, and `y_threshold` control the reference lines. |
 
-`QProtSim.structure_viz.get_structure_image(pdb_path, output_dir, pdb_code=None, chain="A", prefer_download=True, output_path=None)`
+`qprotsim.structure_viz.get_structure_image(pdb_path, output_dir, pdb_code=None, chain="A", prefer_download=True, output_path=None)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -750,7 +805,7 @@ Individual plotting functions:
 | `prefer_download` | `bool` | Try RCSB image download before local rendering. |
 | `output_path` | `Path` or `None` | Optional exact image path. If omitted, a default filename is used. |
 
-`QProtSim.structure_viz.render_structure_pymol(pdb_path, output_path, width=800, height=600, style="cartoon", color_scheme="spectrum", ray_trace=True)`
+`qprotsim.structure_viz.render_structure_pymol(pdb_path, output_path, width=800, height=600, style="cartoon", color_scheme="spectrum", ray_trace=True)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
@@ -762,21 +817,21 @@ Individual plotting functions:
 | `color_scheme` | `str` | Coloring mode: `spectrum`, `chain`, `secondary`, or `element`. |
 | `ray_trace` | `bool` | Use PyMOL ray tracing for higher quality output. |
 
-`QProtSim.structure_viz.optimize_image_for_report(image_path, max_width=800, max_height=600, quality=85)`
+`qprotsim.structure_viz.optimize_image_for_report(image_path, max_width=800, max_height=600, quality=85)`
 
 | Parameter | Type | Usage |
 | --- | --- | --- |
 | `image_path` | `Path` | Image to resize and optimize. |
 | `max_width` | `int` | Maximum output width in pixels. |
 | `max_height` | `int` | Maximum output height in pixels. |
-| `quality` | `int` | Output image quality setting, from 1 to 100. |
+| `quality` | `int` | Passed through to Pillow while saving an optimized PNG. PNG compression and resizing control the resulting size. |
 
 ## Development
 
 Install development dependencies:
 
 ```bash
-pip install -e ".[dev]"
+python -m pip install -e ".[cpu,dev]"
 ```
 
 Run tests when a `tests/` directory is present:
@@ -792,7 +847,14 @@ python run_tests.py --fast
 python run_tests.py --coverage
 ```
 
-The Makefile exposes common development commands:
+Build or preview the MkDocs documentation from the repository root.
+
+```bash
+python -m mkdocs build --strict
+python -m mkdocs serve
+```
+
+The Makefile exposes common development commands.
 
 ```bash
 make test
@@ -820,8 +882,12 @@ pip install -e .
 
 ### GPU device is unavailable
 
-Confirm that CUDA, CuPy, and `pennylane_lightning_gpu` are installed in the
-active environment. For CPU execution, set:
+Install the matching extra and verify the requested PennyLane device directly.
+For CUDA, check the NVIDIA driver and `pennylane-lightning-gpu`. For ROCm,
+check the AMD architecture, ROCm version, and `pennylane-lightning-amdgpu`.
+The installation guide includes backend smoke checks. [Backend verification](docs/installation.md)
+
+For CPU execution, set
 
 ```yaml
 pl_device: default.qubit
@@ -844,18 +910,21 @@ chain: null
 
 ### PyMOL structure rendering is skipped
 
-The analysis continues if PyMOL rendering fails. Install or repair
-`pymol-open-source` if PyMOL figures are required.
+The analysis continues if PyMOL rendering fails. Install the `visualization`
+extra if PyMOL figures are required.
+
+```bash
+python -m pip install ".[visualization]"
+```
 
 ## License
 
-This project is distributed under the MIT License. See `LICENSE`.
+QProtSim software is distributed under the MIT License. See `LICENSE`. The reproduced paper figures carry their original CC BY-NC-ND 4.0 licence and author attribution. [Figure credits and provenance](docs/paper.md#figures-from-the-paper)
 
 ## Citation
 
-If you use `QProtSim` in your research/publication, cite the repository and include the exact
-software version or commit hash used to generate results.
-Repo: https://github.com/pra-ashok/QProtSim 
+If you use QProtSim in your research, cite the paper and include the exact software version or commit hash used to generate results.
 
-Publication citation: 
-Pratik Patil, Bhushan Bonde and Bhaskar Choubey, Quantum Circuit–Based Protein Modelling Reveals Distal Energetic Couplings in Protein, (2026), Preprint (To be communicated).
+Pratik Patil, Bhushan Bonde, and Bhaskar Choubey. **A Quantum Circuit Framework for Protein Ensemble-Level Energetics**. 2026. arXiv:2608.05491. [Paper](https://arxiv.org/abs/2608.05491) · [DOI](https://doi.org/10.48550/arXiv.2608.05491) · [BibTeX](docs/assets/citations/qprotsim.bib)
+
+The documentation includes an attributed summary of the alphaXiv AI overview and three original manuscript figures. [Research page](docs/paper.md) · [alphaXiv overview](https://www.alphaxiv.org/abs/2608.05491)

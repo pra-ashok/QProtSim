@@ -214,7 +214,7 @@ def _config_from_data(data: dict) -> tuple[Config, str, Optional[str], int, Opti
         pdb_path=pdb_path,
         protein_only=bool(data.get("protein_only", True)),
         shots=int(data.get("shots", 100_000)),
-        pl_device=str(data.get("pl_device", "lightning.gpu")),
+        pl_device=str(data.get("pl_device", "default.qubit")),
     )
     return cfg, molecule_name, chain, bins, config_output_dir, config_report_filename
 
@@ -227,6 +227,14 @@ def run_analysis(
     bins: int = 1000,
     run_stamp: Optional[str] = None,
 ) -> AnalysisOutputs:
+    """Sample the model and export tables and figures.
+
+    Returns numerical results, information matrices, and generated artifact
+    paths. Call generate_report with the returned object to write a PDF.
+    bins controls energy plots. Residue information uses its own default
+    histogram resolution. run_stamp supplies report metadata, while artifact
+    filenames remain stable within output_dir.
+    """
     output_dir.mkdir(parents=True, exist_ok=True)
     slug = molecule_name.lower().replace(" ", "_")
     run_stamp = run_stamp or _timestamp()
@@ -868,9 +876,8 @@ def run_batch_analysis_from_yaml(
     """
     Run batch analysis for multiple proteins from a single YAML config.
     
-    The YAML config should contain either:
-    - A list of pdb_codes to download and analyze
-    - A list of configurations, each with either pdb_path or pdb_code
+    A batch YAML config must contain batch_mode=true and a pdb_codes list.
+    Common analysis settings apply to every downloaded structure.
     
     Example YAML format for batch processing with PDB codes:
     ```yaml
@@ -939,7 +946,7 @@ def run_batch_analysis_from_yaml(
     common_settings = {
         "protein_only": config.get("protein_only", True),
         "shots": config.get("shots", 100_000),
-        "pl_device": config.get("pl_device", "lightning.gpu"),
+        "pl_device": config.get("pl_device", "default.qubit"),
         "chain": config.get("chain", "A"),
         "bins": config.get("bins", 1000),
     }

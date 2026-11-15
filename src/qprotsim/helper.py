@@ -343,7 +343,7 @@ def per_residue_sasa(
     protein_only: bool = True
 ) -> Dict[Tuple[str, int, str], float]:
     """
-    Compute per-residue SASA from a PDB file using FreeSASA.
+    Compute normalized per-residue solvent exposure using FreeSASA.
 
     Parameters
     ----------
@@ -357,11 +357,12 @@ def per_residue_sasa(
     Returns
     -------
     res_sasa : dict
-        Mapping (chain_label, resid, resname) -> SASA in Å^2
+        Mapping (chain_label, resid, resname) to dimensionless SASA divided
+        by the residue's Tien et al. theoretical maximum, capped at 0.999.
     """
     structure = freesasa.Structure(pdb_path)
     result = freesasa.calc(structure)
-    if not chain.isalnum():
+    if chain is not None and not chain.isalnum():
         chain = ''
     res_sasa: Dict[Tuple[str, int, str], float] = {}
     residue_areas = result.residueAreas()
@@ -387,7 +388,7 @@ def map_sasa_to_mda_resorder(
     """
     Align SASA dict to MDA residue order. If FreeSASA lacks names, we match on (chain,resid,*).
     """
-    if not chain.isalnum():
+    if chain is not None and not chain.isalnum():
         chain = 'SYSTEM'
 
     def _residue_chain_label(residue) -> str:
