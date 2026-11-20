@@ -2431,7 +2431,7 @@ def run_basin(args):
         E0 = np.asarray(np.load(args.E0, allow_pickle=False), dtype=float).reshape(-1)
         E1 = np.asarray(np.load(args.E1, allow_pickle=False), dtype=float).reshape(-1)
     else:
-        from qprotsim.circuit import energies_ref as circuit_energies_ref
+        from qprotsim.circuit_qk import energies_ref as circuit_energies_ref
 
         residue_names = []
         for label in residue_labels:

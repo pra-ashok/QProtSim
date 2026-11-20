@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 from pathlib import Path
 from typing import Optional, Sequence
 
@@ -288,7 +289,8 @@ def plot_energy_distribution(
     ax.set_ylabel("Frequency (count)")
     fig.tight_layout()
     if save_path:
-        _save_figure_with_pdf(fig, save_path, dpi=600)
+        _save_figure_with_pdf(fig, save_path, dpi=300)
+        plt.close(fig)
     return fig, ax
 
 def plot_energy_distribution_histogram(
@@ -298,20 +300,26 @@ def plot_energy_distribution_histogram(
     save_path: Optional[str] = None,
     fig_num: Optional[int] = None):
     set_academic_style()
-    plt.figure(figsize=(8,4))
-    bin_edges = np.linspace(min(E_total)-5.0, 0.0, bins + 1)
-    counts, bin_edges = np.histogram(E_total, bins=bin_edges, density=False)
-    # print("Counts:",len(counts),", Bin edges", len(bin_edges))
-    # print("bin edges",bin_edges)
-    # print("Counts:",counts)
+    fig = plt.figure(figsize=(8,4))
+    try:
+        bin_edges = np.linspace(min(E_total)-5.0, 0.0, bins + 1)
+        counts, bin_edges = np.histogram(E_total, bins=bin_edges, density=False)
+        # print("Counts:",len(counts),", Bin edges", len(bin_edges))
+        # print("bin edges",bin_edges)
+        # print("Counts:",counts)
 
-    plt.bar(bin_edges[:-1], counts)
-    plt.plot(bin_edges[:-1], counts)
+        plt.bar(bin_edges[:-1], counts)
+        plt.plot(bin_edges[:-1], counts)
 
-    plt.xlabel("Energy (kJ·mol⁻¹)")
-    plt.ylabel("Frequency (count)")
-    if save_path:
-        _save_figure_with_pdf(plt.gcf(), save_path, dpi=600)
+        plt.xlabel("Energy (kJ·mol⁻¹)")
+        plt.ylabel("Frequency (count)")
+        if save_path:
+            _save_figure_with_pdf(fig, save_path, dpi=300)
+    finally:
+        if save_path:
+            plt.close(fig)
+            del fig
+            gc.collect()
     return 
 
 
@@ -340,7 +348,8 @@ def plot_energy_density(
     ax.set_title(f"{molecule_name} energy density")
     fig.tight_layout()
     if save_path:
-        _save_figure_with_pdf(fig, save_path, dpi=600)
+        _save_figure_with_pdf(fig, save_path, dpi=300)
+        plt.close(fig)
     return fig, ax
 
 

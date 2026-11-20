@@ -8,7 +8,7 @@ Quantum Energy Propensity for Proteins — KE-aware & ground-skewed (Qiskit v2.6
 - Residue-residue Kij coupling factors drive directed excitation-transfer layers.
 - Strong directed transfers use paired CRY gates; weak transfers can use YY diffusion.
 
-Author: Pratik (Ported to Qiskit v2.6.2)
+Author: Bhushan Bonde (Ported to Qiskit v2.6.2)
 """
 from dataclasses import dataclass
 import sys

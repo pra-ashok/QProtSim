@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Optional, ParamSpec
 import gc
+import matplotlib.pyplot as plt
 import psutil
 import seaborn as sns
 import numpy as np
@@ -40,7 +42,9 @@ from qprotsim.plots import (
     plot_stability_vs_sensitivity_quadrants,
 )
 from qprotsim.structure_viz import get_structure_image, render_structure_pymol
+from memory_profiler import profile
 
+_P = ParamSpec("_P")
 
 @dataclass
 class AnalysisOutputs:
@@ -74,6 +78,18 @@ def _figure_path(output_dir: Path, run_stamp: str, fig_num: int, name: str, suff
 
 def _figure_label(fig_num: int) -> str:
     return f"Figure {fig_num:02d}"
+
+
+def _render_report_figure(
+    plot: Callable[_P, object], *args: _P.args, **kwargs: _P.kwargs
+) -> None:
+    existing_figures = set(plt.get_fignums())
+    try:
+        plot(*args, **kwargs)
+    finally:
+        for number in set(plt.get_fignums()) - existing_figures:
+            plt.close(number)
+        gc.collect()
 
 
 def _format_run_stamp(run_stamp: str) -> str:
@@ -218,7 +234,7 @@ def _config_from_data(data: dict) -> tuple[Config, str, Optional[str], int, Opti
     )
     return cfg, molecule_name, chain, bins, config_output_dir, config_report_filename
 
-
+@profile
 def run_analysis(
     cfg: Config,
     molecule_name: str,
@@ -300,7 +316,8 @@ def run_analysis(
     plot_paths["energy_distribution"] = _figure_path(
         output_dir, run_stamp, fig_num, "energy_distribution"
     )
-    plot_energy_distribution_histogram(
+    _render_report_figure(
+        plot_energy_distribution_histogram,
         results["E"],
         molecule_name=_figure_label(fig_num),
         bins=bins,
@@ -311,7 +328,8 @@ def run_analysis(
     fig_num += 1
 
     plot_paths["energy_density"] = _figure_path(output_dir, run_stamp, fig_num, "energy_density")
-    plot_energy_density(
+    _render_report_figure(
+        plot_energy_density,
         results["E"],
         molecule_name=_figure_label(fig_num),
         bins=bins,
@@ -322,7 +340,8 @@ def run_analysis(
     fig_num += 1
 
     plot_paths["kl_divergence"] = _figure_path(output_dir, run_stamp, fig_num, "kl_divergence")
-    plot_kl_divergence_scatter(
+    _render_report_figure(
+        plot_kl_divergence_scatter,
         info_df,
         results_df,
         molecule_name=_figure_label(fig_num),
@@ -335,7 +354,8 @@ def run_analysis(
     plot_paths["kl_divergence_line"] = _figure_path(
         output_dir, run_stamp, fig_num, "kl_divergence_line"
     )
-    plot_kl_divergence_line_comparison(
+    _render_report_figure(
+        plot_kl_divergence_line_comparison,
         info_df,
         results_df,
         molecule_name=_figure_label(fig_num),
@@ -349,7 +369,8 @@ def run_analysis(
         _figure_path(output_dir, run_stamp, fig_num, "stability_vs_sensitivity_quadrants")
     )
     plot_paths["stability_vs_info"] = plot_paths["stability_vs_sensitivity_quadrants"]
-    plot_stability_vs_sensitivity_quadrants(
+    _render_report_figure(
+        plot_stability_vs_sensitivity_quadrants,
         info_df,
         results_df,
         results,
@@ -362,7 +383,8 @@ def run_analysis(
     fig_num += 1
 
     plot_paths["dual_axis"] = _figure_path(output_dir, run_stamp, fig_num, "dual_axis_comparison")
-    plot_dual_axis_line_comparison(
+    _render_report_figure(
+        plot_dual_axis_line_comparison,
         info_df=info_df,
         results_df=results_df,
         results=results,
@@ -388,7 +410,8 @@ def run_analysis(
     plot_paths["kij_heatmap"] = _figure_path(
         output_dir, run_stamp, fig_num, "kij_interaction_heatmap"
     )
-    plot_pairwise_matrix_heatmap(
+    _render_report_figure(
+        plot_pairwise_matrix_heatmap,
         kij_matrix,
         labels=labels,
         title="Kij Coupling Matrix",
@@ -428,7 +451,8 @@ def run_analysis(
         plot_paths[plot_key] = _figure_path(
             output_dir, run_stamp, fig_num, f"kij_term_{artifact_term}_heatmap"
         )
-        plot_pairwise_matrix_heatmap(
+        _render_report_figure(
+            plot_pairwise_matrix_heatmap,
             term_matrix,
             labels=labels,
             title=f"Kij Term: {term_name}",
@@ -446,7 +470,8 @@ def run_analysis(
     )
     df = pd.DataFrame(dei_matrix, columns=labels, index=labels)
     df.to_csv(output_dir / f"{slug}_directional_excitation_information.csv")
-    plot_directional_excitation_information_heatmap(
+    _render_report_figure(
+        plot_directional_excitation_information_heatmap,
         dei_matrix,
         labels=labels,
         save_path=str(plot_paths["dei_heatmap"]),
@@ -465,7 +490,8 @@ def run_analysis(
         output_dir, run_stamp, fig_num, "directional_excitation_information_clustermap"
     )
     plot_paths["dei_clustermap_pdf"] = plot_paths["dei_clustermap_png"].with_suffix(".pdf")
-    plot_directional_excitation_information_clustermap(
+    _render_report_figure(
+        plot_directional_excitation_information_clustermap,
         str(dei_csv_path),
         save_png=str(plot_paths["dei_clustermap_png"]),
         save_pdf=str(plot_paths["dei_clustermap_pdf"]),
@@ -481,7 +507,8 @@ def run_analysis(
     plot_paths["mi_heatmap"] = _figure_path(
         output_dir, run_stamp, fig_num, "mutual_information"
     )
-    plot_pairwise_matrix_heatmap(
+    _render_report_figure(
+        plot_pairwise_matrix_heatmap,
         mi_matrix,
         labels=labels,
         title="Mutual Information Matrix",
@@ -522,7 +549,8 @@ def run_analysis(
     plot_paths["joint_states"] = _figure_path(
         output_dir, run_stamp, fig_num, "joint_state_frequencies"
     )
-    plot_joint_state_frequencies(
+    _render_report_figure(
+        plot_joint_state_frequencies,
         matrices=list(joint_counts),
         titles=[
             "(0,0): Both ground",
@@ -538,7 +566,8 @@ def run_analysis(
     fig_num += 1
 
     plot_paths["ground_comparison"] = _figure_path(output_dir, run_stamp, fig_num, "ground_comparison")
-    plot_ground_state_comparison(
+    _render_report_figure(
+        plot_ground_state_comparison,
         results_df,
         results,
         molecule_name=_figure_label(fig_num),
@@ -567,7 +596,7 @@ def _scaled_report_image(path: Path, max_width: float = 6.5 * inch) -> Image:
     scale = min(max_width / float(iw), 1.0)
     return Image(str(path), width=iw * scale, height=ih * scale)
 
-
+@profile
 def generate_report(
     output_path: Path,
     molecule_name: str,
