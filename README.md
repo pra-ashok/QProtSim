@@ -79,6 +79,27 @@ Open `outputs/1l2y/trp_cage_report.pdf` when the command finishes. The same fold
 
 Use a new output folder for each run to keep earlier results. Start with a small protein: simulator memory grows rapidly with residue count. The [first-analysis guide](https://pra-ashok.github.io/QProtSim/getting-started/) explains the settings and memory requirements.
 
+### Run with Qiskit
+
+Install the optional Qiskit dependencies declared in `pyproject.toml`:
+
+```bash
+python -m pip install ".[qiskit]"
+```
+
+Select the framework and local Aer backend in YAML:
+
+```yaml
+backend: qiskit
+qiskit_backend: aer_simulator
+backend_options:
+  method: statevector
+  device: CPU
+seed: 42
+```
+
+The ready-to-run example is `qprotsim analyze -c input/1l2y_qiskit_config.yaml`. Existing configurations use PennyLane by default. Both paths export Pauli-Z samples: `|0>` maps to `+1` (ground) and `|1>` to `-1` (excited). Qiskit's binary measurements are converted and reordered so sample columns follow residue order. The [configuration guide](https://pra-ashok.github.io/QProtSim/configuration/) explains backend settings and ket notation; the [Python guide](https://pra-ashok.github.io/QProtSim/api/) shows how to inspect the native Qiskit circuit.
+
 ## Read the results
 
 Start with the PDF, then use the tables for closer analysis:

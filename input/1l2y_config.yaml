@@ -18,6 +18,7 @@ protein_only: true         # Exclude non-protein residues (water, ions, etc.)
 
 # Quantum Simulation Settings
 shots: 100000              # Number of quantum measurements (more = better statistics)
+backend: pennylane         # Circuit framework: pennylane or qiskit
 pl_device: default.qubit    # PennyLane device: 'default.qubit' (CPU), 'lightning.gpu' (GPU)
 
 # Visualization

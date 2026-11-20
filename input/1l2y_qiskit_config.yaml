@@ -1,0 +1,21 @@
+# Install Qiskit support: python -m pip install ".[qiskit]"
+# Run from the repository root:
+# qprotsim analyze -c input/1l2y_qiskit_config.yaml
+pdb_path: ./input/1L2Y.pdb
+molecule_name: Trp Cage
+chain: A
+protein_only: true
+
+shots: 100000
+backend: qiskit
+qiskit_backend: aer_simulator
+backend_options:
+  method: statevector
+  device: CPU
+seed: 42
+
+# Qiskit |0> => Z=+1 (ground); |1> => Z=-1 (excited).
+# Sample columns follow residue/qubit order, starting at qubit 0.
+bins: 10000
+output_dir: ./outputs/1l2y_qiskit
+report_file_name: 1l2y_qiskit_report.pdf

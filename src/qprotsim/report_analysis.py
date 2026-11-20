@@ -213,8 +213,12 @@ def _config_from_data(data: dict) -> tuple[Config, str, Optional[str], int, Opti
     cfg = Config(
         pdb_path=pdb_path,
         protein_only=bool(data.get("protein_only", True)),
-        shots=int(data.get("shots", 100_000)),
+        shots=data.get("shots", 100_000),
         pl_device=str(data.get("pl_device", "default.qubit")),
+        backend=data.get("backend", "pennylane"),
+        qiskit_backend=data.get("qiskit_backend", "aer_simulator"),
+        backend_options=data.get("backend_options", {}),
+        seed=data.get("seed"),
     )
     return cfg, molecule_name, chain, bins, config_output_dir, config_report_filename
 
@@ -280,6 +284,10 @@ def run_analysis(
         fig_num += 1
 
     results = run_pipeline(cfg, molecule_name, chain=chain, plot_energy=False, bins=bins)
+    # These information routines accept binary excitation samples. Convert
+    # explicitly so an all-ground (+1-only) Z array cannot be mistaken for
+    # an all-excited binary array. Keep Z samples for energy and CSV output.
+    excited_samples = (results["Z_samples"] == -1).astype(np.uint8)
     results_df = export_residue_statistics(
         results,
         out_csv=str(output_dir / f"{slug}_residue_stats.csv"),
@@ -291,7 +299,7 @@ def run_analysis(
     results_df.sort_values("res_index", inplace=True)
     results_df.reset_index(drop=True, inplace=True)
 
-    info_df = residue_information_gain(results["Z_samples"], results["E"])
+    info_df = residue_information_gain(excited_samples, results["E"])
     info_df.to_csv(output_dir / f"{slug}_residue_information_gain.csv", index=False)
     info_df = info_df.merge(results_df[["res_index", "resname"]], on="res_index", how="left")
     info_df.sort_values("res_index", inplace=True)
@@ -440,7 +448,7 @@ def run_analysis(
         fig_numbers[plot_key] = fig_num
         fig_num += 1
 
-    dei_matrix = directional_excitation_information(results["Z_samples"])
+    dei_matrix = directional_excitation_information(excited_samples)
     plot_paths["dei_heatmap"] = _figure_path(
         output_dir, run_stamp, fig_num, "directional_excitation_information"
     )
@@ -473,7 +481,7 @@ def run_analysis(
     fig_numbers["dei_clustermap_png"] = fig_num
     fig_num += 1
 
-    mi_matrix = mutual_information_matrix(results["Z_samples"])
+    mi_matrix = mutual_information_matrix(excited_samples)
     mi_csv_path = output_dir / f"{slug}_mutual_information.csv"
     mi_df = pd.DataFrame(mi_matrix, index=labels, columns=labels)
     mi_df.to_csv(mi_csv_path)
@@ -495,7 +503,7 @@ def run_analysis(
 
     try:
         allostery_outputs = analyse_motif_allostery(
-            Z_samples=results["Z_samples"],
+            Z_samples=excited_samples,
             residue_labels=labels,
             min_support=20,
             save_dir=str(output_dir),
@@ -600,7 +608,9 @@ def generate_report(
         ["PDB path", cfg.pdb_path],
         ["Chain", chain if chain is not None else "--"],
         ["Shots", f"{cfg.shots}"],
-        ["Device", cfg.pl_device],
+        ["Backend", cfg.backend],
+        ["Device", cfg.qiskit_backend if cfg.backend == "qiskit" else cfg.pl_device],
+        ["Sample encoding", "Z: +1 = |0> (ground), -1 = |1> (excited)"],
         ["Residues", f"{len(outputs.results_df)}"],
         ["Generated", _format_run_stamp(outputs.run_stamp)],
         ["Mean energy", f"{np.mean(outputs.results['E']):.4f}"],
@@ -947,6 +957,10 @@ def run_batch_analysis_from_yaml(
         "protein_only": config.get("protein_only", True),
         "shots": config.get("shots", 100_000),
         "pl_device": config.get("pl_device", "default.qubit"),
+        "backend": config.get("backend", "pennylane"),
+        "qiskit_backend": config.get("qiskit_backend", "aer_simulator"),
+        "backend_options": config.get("backend_options", {}),
+        "seed": config.get("seed"),
         "chain": config.get("chain", "A"),
         "bins": config.get("bins", 1000),
     }

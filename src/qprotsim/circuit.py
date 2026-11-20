@@ -10,7 +10,8 @@ Quantum Energy Propensity for Proteins — KE-aware & ground-skewed
 
 Author: Pratik
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from numbers import Integral
 import sys
 from typing import Dict, List, Sequence, Tuple, Mapping, Any
 import MDAnalysis as mda
@@ -22,7 +23,12 @@ from qprotsim.info_theory import debug_mode
 
 @dataclass
 class Config:
-    """Structure and sampling settings, using CPU execution by default."""
+    """Structure and sampling settings, using PennyLane on the CPU by default.
+
+    ``backend`` selects ``pennylane`` or native ``qiskit`` execution.
+    ``backend_options`` are device options for the selected framework. Samples
+    from either framework use Pauli-Z eigenvalues, never computational bits.
+    """
 
     pdb_path: str
     protein_only: bool = True
@@ -30,6 +36,29 @@ class Config:
     # shots and device
     shots: int = 100_000
     pl_device: str = "default.qubit"
+    backend: str = "pennylane"
+    qiskit_backend: str = "aer_simulator"
+    backend_options: dict[str, Any] = field(default_factory=dict)
+    seed: int | None = None
+
+    def __post_init__(self):
+        if self.backend not in ("pennylane", "qiskit"):
+            raise ValueError("backend must be 'pennylane' or 'qiskit'.")
+        if isinstance(self.shots, bool) or not isinstance(self.shots, Integral) or self.shots <= 0:
+            raise ValueError("shots must be a positive integer.")
+        if not isinstance(self.pl_device, str) or not self.pl_device.strip():
+            raise ValueError("pl_device must be a non-empty PennyLane device name.")
+        if not isinstance(self.qiskit_backend, str) or not self.qiskit_backend.strip():
+            raise ValueError("qiskit_backend must be a non-empty Qiskit Aer backend name.")
+        if not isinstance(self.backend_options, Mapping) or not all(
+            isinstance(key, str) for key in self.backend_options
+        ):
+            raise ValueError("backend_options must be a mapping with string keys.")
+        self.backend_options = dict(self.backend_options)
+        if self.seed is not None and (
+            isinstance(self.seed, bool) or not isinstance(self.seed, Integral) or self.seed < 0
+        ):
+            raise ValueError("seed must be a non-negative integer or null.")
 
 # --------------------- Residue properties -------------------
 # Fauchere and Pliska, 1983
@@ -392,10 +421,13 @@ def excitation_propensities(SASA, etype = 1):
             propensities[k] = boltzmann_expectation(energy - (1-v)*energy)["P1"]
     return propensities
 
-def make_device(n_qubits: int, name: str):
+def make_device(n_qubits: int, name: str, **device_options):
     try:
-        return qml.device(name, wires=n_qubits)
+        return qml.device(name, wires=n_qubits, **device_options)
     except Exception:
+        # Explicit options must fail visibly rather than silently being ignored.
+        if device_options:
+            raise
         return qml.device("default.qubit", wires=n_qubits)
 
 def _lookup_kij(
@@ -666,6 +698,42 @@ def _safe_logit_probability(
     x = float(np.clip(x, eps, 1.0 - eps))
     return float(np.log(x / (1.0 - x)))
 
+def _propensity_gate_sequence(
+    exc_propensities,
+    schedule,
+    yy_cap=np.pi / 6.0,
+    apply_yy_diffusion=True,
+    yy_probability_threshold=0.02,
+):
+    """Yield the same ordered RY, CRY and YY rotations for both frameworks."""
+    probabilities = np.asarray(exc_propensities, dtype=float)
+    if probabilities.ndim != 1 or probabilities.size == 0:
+        raise ValueError("exc_propensities must be a non-empty one-dimensional array.")
+    if not np.all(np.isfinite(probabilities)):
+        raise ValueError("exc_propensities must contain finite probabilities.")
+    theta_local = angles_from_probability(probabilities)
+    for i, theta in enumerate(theta_local):
+        yield "ry", float(theta), (i,)
+
+    for entry in schedule:
+        i, j = int(entry["i"]), int(entry["j"])
+        if i == j or not (0 <= i < len(theta_local) and 0 <= j < len(theta_local)):
+            raise ValueError("Schedule entries must name two distinct, valid qubit indices.")
+        phi = float(entry["phi"])
+        deltaP_eff = float(entry.get("drive", entry.get("deltaP", 0.0)))
+        if not np.isfinite(phi) or not np.isfinite(deltaP_eff):
+            raise ValueError("Schedule angles and transfer probabilities must be finite.")
+        if apply_yy_diffusion and deltaP_eff <= yy_probability_threshold:
+            theta_yy = float(_probability_to_ry_angle(deltaP_eff))
+            if yy_cap is not None:
+                theta_yy = float(np.clip(theta_yy, -abs(yy_cap), abs(yy_cap)))
+            if abs(theta_yy) > 0.0:
+                yield "ryy", theta_yy, (i, j)
+        else:
+            yield "cry", phi, (i, j)
+            yield "cry", -phi, (j, i)
+
+
 @debug_mode
 def prepare_state_propensity(
     exc_propensities,
@@ -673,87 +741,151 @@ def prepare_state_propensity(
     kijs,
     E0, E1,
     yy_cap: float | None = np.pi / 6.0,
-    apply_yy_diffusion=True, return_schedule:bool=True, yy_probability_threshold=0.02,
+    apply_yy_diffusion=True, return_schedule: bool = True, yy_probability_threshold=0.02,
     schedule: List[Dict[str, Any]] | None = None,
 ):
+    """Prepare the PennyLane propensity circuit with shared ordered gate layers.
+
+    Residue i is qubit i: |0> is the ground solvation state (Z=+1),
+    and |1> is the excited solvation state (Z=-1).
     """
-    Thermodynamic excitation-redistribution circuit driven by Kij couplings.
-
-    Definitions:
-      ΔG_i = E1_i - E0_i
-      μ_i  = beta*ΔG_i + logit(p_i),    logit(p)=ln(p/(1-p))
-      A_{i->j} = μ_i - μ_j
-      Kij  = residue-residue coupling factor from coupling_factor.py
-
-    Directed transfer probabilities are computed classically from Kij-weighted
-    positive chemical-potential differences, then applied as CRY or YY layers.
-    """
-
-    # 1) Local state initialization via RY rotations
-    theta_local = angles_from_probability(exc_propensities)
-    n_qubits = len(theta_local)
-    for i in range(n_qubits):
-        qml.RY(theta_local[i], wires=i)
-
-    # ------------------------------------------------------------
-    # Classical computation of directed transfer layers.
-    # ------------------------------------------------------------
     if schedule is None:
         schedule = compute_directed_transfer_schedule(
             exc_propensities=exc_propensities,
             pairs=kij_pairs,
             kijs=kijs,
             E0=E0,
-            E1=E1
+            E1=E1,
         )
-    print("----------- Entaglement Layer -------\n")
+    print("----------- Entanglement Layer -------\n")
     print(f"Schedule: {schedule}\n")
     print("------------  ")
-    # sys.stdout.flush()
-
-    # ------------------------------------------------------------
-    # Apply CRY layers in descending DeltaP order.
-    # Layer 1 = highest DeltaP_{i -> j}.
-    # Layer 2 = next highest, discounted by gamma^2, etc.
-    # ------------------------------------------------------------
-    for entry in schedule:
-        i = int(entry["i"])
-        j = int(entry["j"])
-        phi = float(entry["phi"])
-
-        # Use drive as the weak-diffusion proxy if available.
-        deltaP_eff = float(
-            entry.get(
-                "drive",
-                entry.get("deltaP", 0.0),
-            )
-        )
-
-        # Weak diffusion correction
-        if apply_yy_diffusion and deltaP_eff <= yy_probability_threshold:
-
-            theta_yy =  _probability_to_ry_angle(deltaP_eff)
-
-            if yy_cap is not None:
-                theta_yy = float(
-                    np.clip(
-                        theta_yy,
-                        -abs(yy_cap),
-                        abs(yy_cap),
-                    )
-                )
-
-            if abs(theta_yy) > 0.0:
-                qml.IsingYY(theta_yy, wires=[i, j])
-
+    for gate, angle, wires in _propensity_gate_sequence(
+        exc_propensities, schedule, yy_cap, apply_yy_diffusion, yy_probability_threshold
+    ):
+        if gate == "ry":
+            qml.RY(angle, wires=wires[0])
+        elif gate == "cry":
+            qml.CRY(angle, wires=wires)
         else:
-            qml.CRY(phi, wires=[i, j])
-            qml.CRY(-phi, wires=[j, i])
+            qml.IsingYY(angle, wires=wires)
+    return schedule if return_schedule else None
 
-    if return_schedule:
-        return schedule
 
-    return None
+def build_qiskit_circuit(
+    exc_propensities,
+    kij_pairs,
+    kijs,
+    E0, E1,
+    yy_cap: float | None = np.pi / 6.0,
+    apply_yy_diffusion=True,
+    yy_probability_threshold=0.02,
+    schedule: List[Dict[str, Any]] | None = None,
+    measure: bool = True,
+):
+    """Build a native Qiskit circuit matching the PennyLane propensity circuit.
+
+    Residue i maps to qubit i and, when measured, classical bit i. Qiskit
+    displays kets and memory strings as |q_(n-1) ... q_0>; this display order
+    does not change the residue mapping. |0> has Z=+1 and |1> has Z=-1.
+    Set ``measure=False`` for statevector inspection, drawing, or further gates.
+    Qiskit is optional; install QProtSim with the ``qiskit`` extra to use it.
+    """
+    try:
+        from qiskit import QuantumCircuit
+    except ImportError as exc:
+        raise ImportError(
+            'Qiskit support requires the optional packages: pip install ".[qiskit]" '
+            '(or pip install "qprotsim[qiskit]").'
+        ) from exc
+
+    probabilities = np.asarray(exc_propensities, dtype=float)
+    if probabilities.ndim != 1 or probabilities.size == 0:
+        raise ValueError("exc_propensities must be a non-empty one-dimensional array.")
+    n_qubits = len(probabilities)
+    if schedule is None:
+        schedule = compute_directed_transfer_schedule(
+            probabilities, kij_pairs, kijs, E0, E1
+        )
+    circuit = QuantumCircuit(n_qubits, n_qubits if measure else 0, name="qprotsim")
+    circuit.metadata = {
+        "sample_convention": "Pauli-Z: |0> = +1 (ground), |1> = -1 (excited)",
+        "residue_qubit_mapping": "residue i -> qubit i -> classical bit i",
+        "memory_order": "q_(n-1) ... q_0; reverse before forming residue columns",
+    }
+    for gate, angle, wires in _propensity_gate_sequence(
+        probabilities, schedule, yy_cap, apply_yy_diffusion, yy_probability_threshold
+    ):
+        getattr(circuit, gate)(angle, *wires)
+    if measure:
+        circuit.measure(range(n_qubits), range(n_qubits))
+    return circuit
+
+
+def bits_to_z_samples(bits) -> np.ndarray:
+    """Convert a (shots, residues) 0/1 array to signed Pauli-Z samples.
+
+    The conversion is explicit: computational |0> maps to +1 (ground),
+    computational |1> maps to -1 (excited), using Z = 1 - 2 * bit.
+    An all-ones input means all excited; no encoding is guessed from values.
+    """
+    bits = np.asarray(bits)
+    if bits.ndim != 2 or not np.all((bits == 0) | (bits == 1)):
+        raise ValueError("Computational-basis samples must be a 2D array containing only 0 and 1.")
+    return 1 - 2 * bits.astype(np.int8)
+
+
+def qiskit_memory_to_z_samples(memory: Sequence[str], n_qubits: int) -> np.ndarray:
+    """Decode shot memory in Qiskit's n-1 ... 0 order into residue columns.
+
+    For example, memory '001' means residue/qubit 0 is excited, so its
+    Pauli-Z row is [-1, +1, +1]. Register-separating whitespace is ignored.
+    """
+    if isinstance(n_qubits, bool) or not isinstance(n_qubits, Integral) or n_qubits <= 0:
+        raise ValueError("n_qubits must be a positive integer.")
+    rows = []
+    for shot in memory:
+        if not isinstance(shot, str):
+            raise ValueError("Qiskit memory must contain binary strings.")
+        bitstring = "".join(shot.split())
+        if len(bitstring) != n_qubits or any(bit not in "01" for bit in bitstring):
+            raise ValueError(f"Each Qiskit memory string must contain exactly {n_qubits} binary digits.")
+        rows.append([int(bit) for bit in reversed(bitstring)])
+    bits = np.asarray(rows, dtype=np.int8).reshape(-1, n_qubits)
+    return bits_to_z_samples(bits)
+
+
+def _sample_qiskit(exc_propensities, kij_pairs, kijs, E0, E1, cfg, schedule):
+    try:
+        from qiskit import transpile
+        from qiskit_aer import Aer
+    except ImportError as exc:
+        raise ImportError(
+            'Qiskit execution requires Qiskit Aer: pip install ".[qiskit]" '
+            '(or pip install "qprotsim[qiskit]").'
+        ) from exc
+    circuit = build_qiskit_circuit(
+        exc_propensities, kij_pairs, kijs, E0, E1, schedule=schedule
+    )
+    try:
+        backend = Aer.get_backend(cfg.qiskit_backend)
+        backend.set_options(**cfg.backend_options)
+    except Exception as exc:
+        raise ValueError(
+            f"Cannot configure Qiskit backend {cfg.qiskit_backend!r}: {exc}"
+        ) from exc
+    seed = None if cfg.seed is None else int(cfg.seed)
+    compiled = transpile(circuit, backend, seed_transpiler=seed)
+    run_options = {"shots": int(cfg.shots), "memory": True}
+    if seed is not None:
+        run_options["seed_simulator"] = seed
+    result = backend.run(compiled, **run_options).result()
+    if not result.success:
+        raise RuntimeError(f"Qiskit backend {cfg.qiskit_backend!r} execution failed: {result.status}")
+    samples = qiskit_memory_to_z_samples(result.get_memory(compiled), len(exc_propensities))
+    if samples.shape != (cfg.shots, len(exc_propensities)):
+        raise RuntimeError("Qiskit returned a sample shape different from (shots, residues).")
+    return samples
 
 
 def sample_bits(exc_propensities: np.ndarray,
@@ -763,7 +895,14 @@ def sample_bits(exc_propensities: np.ndarray,
                 cfg: Config,
                 return_schedule: bool = False,
                 ) -> np.ndarray | tuple[np.ndarray, List[Dict[str, Any]]]:
+    """Sample either framework and return (shots, residues) Pauli-Z values.
+
+    |0> is +1 (ground), |1> is -1 (excited). Qiskit's measured bits are
+    explicitly converted and reordered before entering the analysis pipeline.
+    """
     n_qubits = len(exc_propensities)
+    if n_qubits == 0:
+        raise ValueError("At least one residue/qubit is required for sampling.")
     schedule = compute_directed_transfer_schedule(
         exc_propensities=exc_propensities,
         pairs=kij_pairs,
@@ -771,9 +910,17 @@ def sample_bits(exc_propensities: np.ndarray,
         E0=E0,
         E1=E1,
     )
+    if cfg.backend == "qiskit":
+        samples = _sample_qiskit(
+            exc_propensities, kij_pairs, kijs, E0, E1, cfg, schedule
+        )
+        return (samples, schedule) if return_schedule else samples
 
     def _run_sampling(device_name: str):
-        dev = make_device(n_qubits, device_name)
+        device_options = dict(cfg.backend_options)
+        if cfg.seed is not None:
+            device_options["seed"] = int(cfg.seed)
+        dev = make_device(n_qubits, device_name, **device_options)
 
         @qml.set_shots(cfg.shots)
         @qml.qnode(dev)
@@ -789,7 +936,8 @@ def sample_bits(exc_propensities: np.ndarray,
             return [qml.sample(qml.PauliZ(i)) for i in range(n_qubits)]
 
         out = qnode()
-        return np.stack(out, axis=1)
+        # Single-shot measurements can be scalars; preserve both axes.
+        return np.asarray(out, dtype=np.int8).reshape(n_qubits, cfg.shots).T
 
     try:
         samples = _run_sampling(cfg.pl_device)
@@ -824,9 +972,21 @@ def energy_from_samples(Z_samples: np.ndarray,
                         E1: np.ndarray,
     ) -> np.ndarray:
     """
-    Compute total configuration energy for each quantum sample.
-    Ensures physical consistency with theoretical bounds.
+    Compute total energy from explicit Pauli-Z samples, shaped (shots, residues).
+
+    |0> is +1 and contributes E0; |1> is -1 and contributes E1.
+    Convert computational 0/1 bits with ``bits_to_z_samples`` first. Input
+    values are never used to guess the convention: all +1 means all ground.
     """
+    Z_samples = np.asarray(Z_samples)
+    if Z_samples.ndim != 2 or not np.all((Z_samples == 1) | (Z_samples == -1)):
+        raise ValueError(
+            "Z_samples must be a 2D array of Pauli-Z values +1/-1. "
+            "Convert 0/1 bits with bits_to_z_samples first."
+        )
+    E0, E1 = np.asarray(E0, dtype=float), np.asarray(E1, dtype=float)
+    if E0.shape != (Z_samples.shape[1],) or E1.shape != E0.shape:
+        raise ValueError("E0 and E1 must be one-dimensional with one energy per residue column.")
     ground = (Z_samples == +1) # Indicator: Z-samples == +1
     # print("Ground samples",ground,type(ground),ground.shape)
     # base energy per configuration

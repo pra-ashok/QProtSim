@@ -64,6 +64,29 @@ pl_device: default.qubit
 
 If installation reports a missing compiler or a failed FreeSASA build, see [installation troubleshooting](troubleshooting.md#installation-fails). FreeSASA is the tool QProtSim uses to estimate how much of each residue is exposed to solvent.
 
+## Optional Qiskit execution
+
+Install the Qiskit SDK and Aer simulator through the extra declared in `pyproject.toml`:
+
+```bash
+python -m pip install ".[qiskit]"
+```
+
+Select Qiskit in your YAML configuration:
+
+```yaml
+backend: qiskit
+qiskit_backend: aer_simulator
+backend_options:
+  method: statevector
+  device: CPU
+seed: 42
+```
+
+QProtSim builds a native Qiskit circuit with the same initial rotations and coupling gates as its PennyLane circuit. `qiskit_backend` selects a local Aer backend; `backend_options` supplies its simulator options. See the [Aer simulator documentation](https://qiskit.github.io/qiskit-aer/stubs/qiskit_aer.AerSimulator.html) for available methods and devices. This installation uses CPU simulation; Aer GPU execution requires a compatible Aer GPU installation and hardware.
+
+Run the supplied example with `qprotsim analyze -c input/1l2y_qiskit_config.yaml`. It uses the local `input/1L2Y.pdb` structure. Missing Qiskit dependencies or an invalid Qiskit backend produce an error. Existing configurations without `backend` continue to use PennyLane.
+
 ## Optional GPU execution
 
 A GPU is a graphics processor that can also run numerical calculations. Choose the option matching your hardware and system software:
@@ -77,7 +100,7 @@ These packages use PennyLane Lightning 0.44.0. Installing a GPU package does not
 
 ### Verify the backend
 
-A backend is the simulator used to execute the circuit. QProtSim can continue on the CPU when a requested backend is unavailable. The report lists the requested backend, so that label alone does not confirm GPU execution.
+A backend is the simulator used to execute the circuit. The PennyLane execution path can continue on the CPU when a requested device is unavailable. The report lists the requested device, so that label alone does not confirm GPU execution. The Qiskit execution path reports backend failures directly.
 
 Before measuring GPU performance, run this small check in Python. Replace `lightning.qubit` with your chosen device name. A successful run prints the device name and a sample shape of `(100, 2)`.
 

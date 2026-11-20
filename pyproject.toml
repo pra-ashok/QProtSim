@@ -48,7 +48,6 @@ dependencies = [
   "seaborn>=0.13.2",
   "pillow",
   "psutil",
-  "pennylane-qiskit",
   "gast>=0.7.0",
 ]
 
@@ -56,6 +55,8 @@ dependencies = [
 # The base installation also supports CPU execution. Keep the CPU extra explicit
 # so installation commands can use the same form for every backend.
 cpu = ["pennylane-lightning==0.44.0"]
+# Native Qiskit circuit construction and local Aer simulation.
+qiskit = ["qiskit>=2,<3", "qiskit-aer>=0.17,<0.19"]
 # Lightning-GPU supplies its CUDA 12 user-space libraries through dependencies.
 # A compatible NVIDIA driver and supported Linux GPU are required separately.
 cuda = ["pennylane-lightning-gpu==0.44.0"]

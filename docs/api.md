@@ -80,7 +80,11 @@ print(outputs.results["Z_samples"].shape)
 | `pdb_path` | Required | Path to an existing PDB file, passed as a string. |
 | `protein_only` | `True` | Select protein residues. Standard amino acids have the reference values needed by the model. |
 | `shots` | `100_000` | Number of sampled configurations. |
-| `pl_device` | `"default.qubit"` | Simulator backend. See [installation](installation.md). |
+| `backend` | `"pennylane"` | Circuit framework: `"pennylane"` or `"qiskit"`. |
+| `pl_device` | `"default.qubit"` | Device used by PennyLane. See [installation](installation.md). |
+| `qiskit_backend` | `"aer_simulator"` | Local Aer backend used by Qiskit. |
+| `backend_options` | `{}` | Mapping of simulator options. |
+| `seed` | `None` | Optional nonnegative integer for reproducible sampling. |
 
 Pass the chain separately to `run_analysis` or `run_pipeline`. Use `chain=None` to select all chains; review the selected size before sampling.
 
@@ -180,6 +184,42 @@ energies = results["E"]
 The final excitation frequency is `1 - results["p_ground"]`. It can differ from `results["p_exc"]` because the latter describes the starting state.
 
 For a detailed examination of the model, `pairs`, `kijs`, `kij_terms`, and `entanglement_schedule` contain the residue pairs, coupling strengths, coupling components, and ordered circuit parameters. See the [model definitions](theory.md#mathematical-definitions) for their scientific meaning.
+
+## Build and inspect a Qiskit circuit
+
+Install the optional dependencies with `python -m pip install ".[qiskit]"`. To use Qiskit for the workflows above, create the configuration with:
+
+```python
+cfg = Config(
+    pdb_path="input/1L2Y.pdb",
+    shots=10_000,
+    backend="qiskit",
+    qiskit_backend="aer_simulator",
+    backend_options={"method": "statevector", "device": "CPU"},
+    seed=42,
+)
+```
+
+To inspect the native `QuantumCircuit`, reuse the numerical inputs from `run_pipeline`:
+
+```python
+from qprotsim.circuit import build_qiskit_circuit
+
+circuit = build_qiskit_circuit(
+    results["p_exc"],
+    results["pairs"],
+    results["kijs"],
+    results["E0"],
+    results["E1"],
+    schedule=results["entanglement_schedule"],
+    measure=False,
+)
+print(circuit.draw(output="text"))
+```
+
+The builder uses the same ordered RY, CRY, and YY rotation gates as the PennyLane circuit. Omit `measure=False` to include computational-basis measurements. It returns a circuit without executing it.
+
+In both execution paths, `sample_bits` returns an array of shape `(shots, n_residues)` containing Pauli-Z outcomes: `|0>` maps to `+1` and `|1>` maps to `-1`. Qiskit's binary outcomes are converted with `z = 1 - 2*b`. A Qiskit bit string displays qubit 0 on the right; QProtSim places that qubit in sample column 0. See [IBM's bit-ordering guide](https://quantum.cloud.ibm.com/docs/en/qiskit/bit-ordering). The labels `|+>` and `|->` are Pauli-X eigenstates, rather than names for these Pauli-Z outcomes.
 
 ## Calculate information measures
 
