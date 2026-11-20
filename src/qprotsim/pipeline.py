@@ -6,7 +6,7 @@ import numpy as np
 import MDAnalysis as mda
 import pandas as pd
 
-from qprotsim.circuit import (
+from qprotsim.circuit_qk import (
     Config,
     energy_from_samples,
     excitation_propensities,

@@ -27,7 +27,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 
 dependencies = [
-  "numpy",
+  "numpy>=2.5.2",
   "MDAnalysis",
   "biopython>=1.86",
   "pandas>=2.2.2",
@@ -41,8 +41,8 @@ dependencies = [
   "plotly>=5.20.0",
   "ipywidgets>=8.1.0",
   "zstandard>=0.25.0",
-  "pennylane==0.44.0",
-  "pennylane-lightning==0.44.0",
+  "pennylane>=0.44.0",
+  "pennylane-lightning>=0.44.0",
   "reportlab",
   "pyyaml",
   "seaborn>=0.13.2",
@@ -50,6 +50,7 @@ dependencies = [
   "psutil",
   "pennylane-qiskit",
   "gast>=0.7.0",
+  "qiskit>=2.6.2"
 ]
 
 [project.optional-dependencies]

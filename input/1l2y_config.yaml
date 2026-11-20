@@ -25,5 +25,5 @@ bins: 10000                 # Number of bins for energy histograms
 
 # Make the open phi_cap as pi/2 and discount to 0.95
 # Output Settings
-output_dir: ./outputs/1l2y
+output_dir: ./outputs/1l2y_qiskit
 report_file_name: 1l2y_report_A_v1.pdf

@@ -17,7 +17,7 @@ from reportlab.lib.units import inch
 from reportlab.lib.utils import ImageReader
 from reportlab.platypus import Image, KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from qprotsim.circuit import Config
+from qprotsim.circuit_qk import Config
 from qprotsim.info_theory import (
     analyse_motif_allostery,
     directional_excitation_information,
